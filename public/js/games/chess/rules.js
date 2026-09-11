@@ -351,6 +351,7 @@ function searchRoot(state, maxDepth, timeMs, rng, randomness) {
   if (randomness > 0) {
     const top = scored[0].v;
     const pool = scored.filter((x) => top - x.v <= randomness * 120 && x.v > -WINV + 500);
+    if (!pool.length) return scored[0].m; // 모든 수가 지는 수면 그중 최선
     return pool[rng.int(Math.min(pool.length, 4))].m;
   }
   return scored[0].m;

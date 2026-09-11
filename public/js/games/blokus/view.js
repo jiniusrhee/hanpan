@@ -148,7 +148,7 @@ export function create(root, ctx) {
 
   return {
     update(state, events, prev, animate) {
-      if (state.size !== size) build(state.size);
+      if (state.size !== size) { build(state.size); if (!zoomed && board.el.clientWidth / state.size < 20) setZoom(true); } // 칸이 20px보다 작으면 처음부터 확대
       preview = null;
       drawCells(state, events, animate);
       drawAnchors(state); drawGhost(state);

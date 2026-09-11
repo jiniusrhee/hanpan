@@ -26,7 +26,6 @@ export function create(root, ctx) {
     .bs-tray .bar { display: inline-flex; gap: 2px; }
     .bs-tray .bar i { width: 8px; height: 8px; background: #b8c2cf; border-radius: 2px; }
     .bs-mini { width: 38%; margin: 0 auto 6px; }
-    .bs-sea.big { max-width: min(100%, calc(100dvh - 470px)); margin: 0 auto; }
     .bs-mini .board { border-radius: 6px; }
   ` });
   root.appendChild(style);

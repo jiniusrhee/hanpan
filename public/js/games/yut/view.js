@@ -11,14 +11,14 @@ export function create(root, ctx) {
   const wrap = h('div', { style: { width: '100%' } });
   root.appendChild(wrap);
   const style = h('style', { text: `
-    .yut-sticks { display: flex; justify-content: center; gap: 10px; height: 64px; align-items: center; }
-    .yut-stick { width: 14px; height: 56px; border-radius: 7px; background: linear-gradient(90deg, #8b5a2b, #5e3a17); box-shadow: 0 3px 6px rgba(0,0,0,.4); transition: transform .2s; }
+    .yut-sticks { display: flex; justify-content: center; gap: 10px; height: 52px; align-items: center; }
+    .yut-stick { width: 13px; height: 44px; border-radius: 7px; background: linear-gradient(90deg, #8b5a2b, #5e3a17); box-shadow: 0 3px 6px rgba(0,0,0,.4); transition: transform .2s; }
     .yut-stick.flat { background: linear-gradient(90deg, #f1d9a7, #d9b77c); border: 1px solid #8b5a2b; }
     .yut-stick.marked::after { content: ''; display: block; width: 6px; height: 6px; border-radius: 50%; background: #c0392b; margin: 6px auto 0; }
     .yut-stick.tumble { animation: yut-tumble .75s cubic-bezier(.3,.7,.4,1) both; }
     @keyframes yut-tumble { 0% { transform: translateY(-60px) rotate(0) scale(1.2); opacity: 0; } 30% { opacity: 1; } 60% { transform: translateY(6px) rotate(380deg) scale(1); } 80% { transform: translateY(-4px) rotate(355deg); } 100% { transform: translateY(0) rotate(360deg); } }
-    .yut-ctl { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-items: center; margin-top: 6px; }
-    .yut-chip { padding: 6px 12px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); font-weight: 800; font-size: 13px; }
+    .yut-ctl { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; align-items: center; margin-top: 4px; }
+    .yut-chip { min-height: 36px; padding: 6px 12px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); font-weight: 800; font-size: 13px; }
     .yut-chip.sel { background: var(--accent); color: #fff; border-color: transparent; }
     .yut-token { cursor: pointer; }
     .yut-token.movable { filter: drop-shadow(0 0 3px #fff); }
@@ -81,8 +81,7 @@ export function create(root, ctx) {
     for (const m of moves) {
       const tok = state.tokens[state.turn][m.token];
       const dest = destOf(tok, state.pending[m.result]);
-      if (dest == null) continue;
-      if (dest === FINISH) continue;
+      if (dest == null || dest === FINISH || dest < 0) continue; // 완주·출발점 복귀는 표시할 칸이 없다
       hlG.appendChild(svg('circle', { cx: X(dest), cy: Y(dest), r: 0.3, fill: 'none', stroke: COLORS[state.turn], 'stroke-width': 0.07, 'stroke-dasharray': '0.12 0.08' }));
     }
   }
@@ -167,13 +166,13 @@ export function create(root, ctx) {
         const fin = events.find((e) => e.type === 'finish');
         const sc = events.find((e) => e.type === 'shortcut');
         const st = events.find((e) => e.type === 'stack');
-        const path = (moveEv.path || []).filter((n) => n !== FINISH);
+        const path = (moveEv.path || []).filter((n) => n !== FINISH && n >= 0); // 완주/출발점 복귀(-1)는 그리지 않는다
         const stepMs = 150;
         const total = Math.max(1, path.length) * stepMs;
         animating = true; ctx.lock(total + 40);
         // 도착 칸의 말은 잠시 숨기고, 유령 말이 경로를 따라 움직인다
         renderTokens(state); renderCtl(state);
-        const hideTo = moveEv.to !== FINISH ? [...tokG.children].find((g) => { const c = g.querySelector('circle:nth-child(2)'); return c && Math.abs(+c.getAttribute('cx') - X(moveEv.to)) < 0.01 && Math.abs(+c.getAttribute('cy') - Y(moveEv.to)) < 0.01; }) : null;
+        const hideTo = moveEv.to !== FINISH && moveEv.to >= 0 ? [...tokG.children].find((g) => { const c = g.querySelector('circle:nth-child(2)'); return c && Math.abs(+c.getAttribute('cx') - X(moveEv.to)) < 0.01 && Math.abs(+c.getAttribute('cy') - Y(moveEv.to)) < 0.01; }) : null;
         if (hideTo) hideTo.style.opacity = '0';
         const startNode = moveEv.from === -1 ? 0 : moveEv.from;
         const ghost = svg('g');

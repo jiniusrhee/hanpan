@@ -98,7 +98,7 @@ let totalSteps = 0, totalGames = 0;
 for (const dev of devices) {
   const page = await browser.newPage();
   await page.setViewport({ width: dev.w, height: dev.h, deviceScaleFactor: dev.dpr, isMobile: dev.mobile, hasTouch: dev.mobile });
-  await page.evaluateOnNewDocument(() => { document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '*, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }'; document.head.appendChild(st); }); });
+  await page.evaluateOnNewDocument(() => { document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '*, *::before, *::after { animation: none !important; transition: none !important; }'; document.head.appendChild(st); }); });
   let errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (msg) => { if (msg.type() === 'error') errors.push(msg.text()); });

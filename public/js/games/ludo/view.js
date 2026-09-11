@@ -126,7 +126,7 @@ export function create(root, ctx) {
           renderTokens(state); afterRoll(state);
           // 굴렸는데 움직일 말이 없어 차례가 넘어간 경우: 잠시 보여준 뒤 다음 사람 컨트롤로
           if (state.dice == null) setTimeout(() => { if (ctx.match.state === state) renderCtl(state, null, false); }, 700);
-          window.dispatchEvent(new Event('resize'));
+          (ctx.relayout ? ctx.relayout() : window.dispatchEvent(new Event('resize')));
         }
       }, 70);
       return;

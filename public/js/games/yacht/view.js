@@ -95,7 +95,7 @@ export function create(root, ctx) {
       if (animate && rollEv) {
         rolling = true; ctx.lock(560);
         ctx.sound.play('dice'); ctx.haptics.rattle();
-        setTimeout(() => { rolling = false; renderCtl(state); renderTable(state, null); window.dispatchEvent(new Event('resize')); if (events.some((e) => e.type === 'yacht')) { ctx.fx.stamp('야찌!!', { glow: 'rgba(255,194,71,1)' }); ctx.sound.play('win'); ctx.haptics.success(); ctx.fx.shake(true); const r = diceRow.getBoundingClientRect(), r0 = ctx.boardArea.getBoundingClientRect(); ctx.fx.burst(r.left - r0.left + r.width / 2, r.top - r0.top + r.height / 2, { count: 40, palette: 'gold', speed: 1.6 }); } }, 600);
+        setTimeout(() => { rolling = false; renderCtl(state); renderTable(state, null); (ctx.relayout ? ctx.relayout() : window.dispatchEvent(new Event('resize'))); if (events.some((e) => e.type === 'yacht')) { ctx.fx.stamp('야찌!!', { glow: 'rgba(255,194,71,1)' }); ctx.sound.play('win'); ctx.haptics.success(); ctx.fx.shake(true); const r = diceRow.getBoundingClientRect(), r0 = ctx.boardArea.getBoundingClientRect(); ctx.fx.burst(r.left - r0.left + r.width / 2, r.top - r0.top + r.height / 2, { count: 40, palette: 'gold', speed: 1.6 }); } }, 600);
       }
       if (animate && scoreEv) {
         ctx.sound.play(scoreEv.value >= 30 ? 'bonus' : scoreEv.value > 0 ? 'score' : 'pop'); ctx.haptics.tap();

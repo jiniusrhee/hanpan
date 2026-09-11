@@ -194,6 +194,7 @@ export async function renderPlay() {
       if (info.sub != null) p.querySelector('.sp-sub').textContent = info.sub;
     },
     lock: (ms) => { match.locked = true; setTimeout(() => { match.locked = false; }, ms); },
+    relayout: () => applyLayout(), // 뷰가 지연 렌더로 높이를 바꿨을 때 즉시 화면을 다시 맞춘다
     stamp: (text, opts) => fx.stamp(text, opts),
     isOver: () => !!match.over,
     restart: () => restart(),

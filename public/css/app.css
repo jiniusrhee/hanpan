@@ -392,6 +392,9 @@ svg { display: block; }
 .play.landscape .seat-panel.compact { flex-direction: row; text-align: left; }
 .play.landscape .seat-panel.compact .sp-body { width: auto; }
 
+/* 넓은 화면에서는 3~4인 패널도 가로형으로 */
+@media (min-width: 700px) { .seat-panel.compact { flex-direction: row; text-align: left; padding: 8px 12px; gap: 8px; } .seat-panel.compact .sp-body { width: auto; } .seat-panel.compact .sp-name { font-size: 13px; } .seat-panel.compact .sp-score { font-size: 18px; } }
+
 /* 스켈레톤 / 로딩 */
 .loading { display: grid; place-items: center; padding: 40px; color: var(--muted); gap: 12px; }
 .spinner { width: 28px; height: 28px; border-radius: 50%; border: 3px solid var(--border-strong); border-top-color: var(--accent); animation: spin .8s linear infinite; }

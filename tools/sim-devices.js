@@ -139,6 +139,7 @@ for (const dev of devices) {
     const counts = {};
     const shots = new Set();
     let gamesDone = 0, stuck = 0, sample = null;
+    const tc = Date.now();
     try {
       await page.goto(`${SERVER}/play?sim=${cfg.id}&players=${cfg.players}`, { waitUntil: 'networkidle0' });
       await page.waitForFunction(() => window.__hanpan && window.__hanpan.match && window.__hanpan.match.state, { timeout: 15000 });

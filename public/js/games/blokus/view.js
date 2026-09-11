@@ -21,10 +21,20 @@ export function create(root, ctx) {
     .bk-ctl { display: flex; gap: 6px; justify-content: center; align-items: center; }
   ` });
   root.appendChild(style);
+  // 작은 화면에서는 20×20 칸이 너무 작아 확대 모드를 제공한다 (보드가 2배가 되고 스크롤로 이동)
+  let zoomed = false;
   const boardWrap = h('div');
+  const scroller = h('div', { style: { width: '100%', overflow: 'auto', WebkitOverflowScrolling: 'touch', borderRadius: '12px' } }, boardWrap);
   const tray = h('div', { class: 'bk-tray' });
   const ctl = h('div', { class: 'bk-ctl' });
-  wrap.append(boardWrap, ctl, tray);
+  wrap.append(scroller, ctl, tray);
+  function setZoom(on) {
+    zoomed = on;
+    boardWrap.style.width = on ? '200%' : '';
+    scroller.style.maxHeight = on ? scroller.getBoundingClientRect().width + 'px' : '';
+    if (on) { const b = scroller.getBoundingClientRect(); scroller.scrollTo({ left: b.width / 2, top: b.width / 2 }); }
+    window.dispatchEvent(new Event('resize')); // 플레이 화면이 다시 맞추도록
+  }
 
   function build(n) {
     boardWrap.innerHTML = '';
@@ -91,6 +101,7 @@ export function create(root, ctx) {
     ctl.innerHTML = '';
     if (!ctx.canAct()) { ctl.appendChild(h('span', { class: 'hint', text: `남은 조각 ${state.hands.map((hd, i) => `${ctx.seatNames[i]} ${hd.length}`).join(' · ')}` })); return; }
     ctl.append(
+      h('button', { class: 'btn btn-sm' + (zoomed ? ' btn-primary' : ''), text: zoomed ? '🔍 축소' : '🔍 확대', onclick: () => { setZoom(!zoomed); ctx.sound.play('click'); renderCtl(state); } }),
       h('button', { class: 'btn btn-sm', text: '↻ 회전', disabled: sel == null, onclick: () => { if (sel == null) return; orient = (orient + 1) % ORIENTS[sel].length; ctx.sound.play('click'); reapplyPreview(state); renderTray(state); } }),
       h('button', { class: 'btn btn-sm', text: '⇄ 뒤집기', disabled: sel == null, onclick: () => { if (sel == null) return; orient = flipOrient(sel, orient); ctx.sound.play('click'); reapplyPreview(state); renderTray(state); } }),
       h('button', { class: 'btn btn-sm btn-good', text: '✓ 놓기', disabled: !(preview && preview.ok), onclick: () => { if (preview && preview.ok) submitPreview(); } }),

@@ -165,7 +165,7 @@ export async function renderPlay() {
         try { view.update(state, events, prev, animate); } catch (e) { console.error(e); }
         updateTurnUI();
         if (!laidOut) { laidOut = true; requestAnimationFrame(applyLayout); setTimeout(applyLayout, 350); }
-        else onResize(); // 패널 내용(잡은 말 등)이 늘어나면 다시 맞춘다
+        else { applyLayout(); onResize(); } // 패널 내용(잡은 말 등)이 늘어나면 바로, 그리고 잠시 뒤 한 번 더 맞춘다
       },
       onOver(st) { onGameOver(st); },
       onBotThinking(seat, on) { panels.forEach((p, i) => p.classList.toggle('thinking', on && i === seat)); if (seat >= 0 && on) updateTurnUI(); },

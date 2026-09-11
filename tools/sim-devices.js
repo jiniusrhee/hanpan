@@ -54,8 +54,10 @@ const METRICS = () => {
   const small = [];
   for (const b of document.querySelectorAll('.play button, .screen button')) { const r = b.getBoundingClientRect(); if (r.width && r.height && Math.min(r.width, r.height) < 34 && !b.classList.contains('plain')) small.push((b.textContent.trim() || b.className).slice(0, 14)); }
   m.smallButtons = [...new Set(small)];
-  const cell = q('.board .cell');
-  if (cell) { const r = cell.getBoundingClientRect(); m.cell = Math.round(Math.min(r.width, r.height) * 10) / 10; }
+  // 여러 보드(배틀십 미니맵 등)가 있으면 가장 큰 보드의 칸 크기를 본다
+  let cellMax = null;
+  for (const b of document.querySelectorAll('.board')) { const c = b.querySelector('.cell'); if (!c) continue; const r = c.getBoundingClientRect(); const v = Math.min(r.width, r.height); if (cellMax == null || v > cellMax) cellMax = v; }
+  if (cellMax != null) m.cell = Math.round(cellMax * 10) / 10;
   const clipped = [];
   for (const el of document.querySelectorAll('.btn, .yut-chip, .yc-table td, .chip, .badge, .gc-name, .opt-label')) {
     if (el.scrollWidth > el.clientWidth + 2 && getComputedStyle(el).textOverflow !== 'ellipsis' && getComputedStyle(el).overflow !== 'auto') clipped.push(el.className.split(' ')[0] + ':' + el.textContent.trim().slice(0, 12));
@@ -145,7 +147,7 @@ for (const dev of devices) {
         const r = await page.evaluate(() => window.__hanpan.step());
         totalSteps++;
         if (r.stuck) { stuck++; await page.evaluate(() => window.__hanpan.restart()); await sleep(200); continue; }
-        await sleep(45);
+        await sleep(25);
         const m = await page.evaluate(METRICS);
         if (i === 0 || i === Math.floor(STEPS / 2)) sample = m;
         const an = anomaliesOf(m, dev, 'play');

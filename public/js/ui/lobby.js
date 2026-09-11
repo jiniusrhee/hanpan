@@ -18,6 +18,15 @@ export async function renderLobby({ code }) {
   code = code.toUpperCase();
   const app = document.getElementById('app');
   clear(app);
+  if (!net.available) {
+    // 정적 호스팅(GitHub Pages 등)에는 대전 서버가 없다
+    app.appendChild(h('div', { class: 'screen center' },
+      h('div', { style: { fontSize: '52px', marginTop: '40px' }, text: '🔌' }),
+      h('h2', { text: '이 주소에서는 온라인 대전을 쓸 수 없어요' }),
+      h('p', { class: 'muted', text: '초대 링크로 함께 하려면 대전 서버가 있는 주소(서버 배포판)에서 방을 만들어야 해요. 이 주소에서는 봇 대전과 한 기기 대전을 즐길 수 있어요.' }),
+      h('button', { class: 'btn btn-primary btn-lg', text: '홈으로', onclick: () => navigate('/', { replace: true }) })));
+    return;
+  }
   app.appendChild(h('div', { class: 'loading' }, h('div', { class: 'spinner' }), h('div', { text: '방에 들어가는 중…' })));
 
   // 접속 / 재접속

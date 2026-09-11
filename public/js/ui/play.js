@@ -108,14 +108,14 @@ export async function renderPlay() {
       }
       return;
     }
-    for (let pass = 0; pass < 2; pass++) {
+    for (let pass = 0; pass < 3; pass++) {
       const r = boardArea.getBoundingClientRect();
       if (!r.height || !r.width) return;
-      let availH;
-      {
-        const others = [topbar, banner, topStrip, statusEl, bottomStrip, bottom].reduce((a, el) => a + (el.classList.contains('hidden') ? 0 : el.getBoundingClientRect().height), 0);
-        availH = vh - others - 12;
-      }
+      // 보드를 뺀 나머지 높이(패널, 상태줄, 간격, 여백, 상단바, 액션바)를 실제로 재서 남는 높이를 구한다
+      const kids = [...body.children].filter((el) => !el.classList.contains('hidden') && el.getBoundingClientRect().height > 0);
+      const contentH = kids.reduce((a, el) => a + el.getBoundingClientRect().height, 0) + 8 * Math.max(0, kids.length - 1) + 8;
+      const nonBoard = (contentH - r.height) + topbar.getBoundingClientRect().height + bottom.getBoundingClientRect().height;
+      const availH = vh - nonBoard - 2;
       if (r.height <= availH + 1) return;
       const w = Math.max(landscape ? 200 : 240, Math.floor(r.width * (availH / r.height)));
       if (w >= r.width - 1) return;
@@ -165,6 +165,7 @@ export async function renderPlay() {
         try { view.update(state, events, prev, animate); } catch (e) { console.error(e); }
         updateTurnUI();
         if (!laidOut) { laidOut = true; requestAnimationFrame(applyLayout); setTimeout(applyLayout, 350); }
+        else onResize(); // 패널 내용(잡은 말 등)이 늘어나면 다시 맞춘다
       },
       onOver(st) { onGameOver(st); },
       onBotThinking(seat, on) { panels.forEach((p, i) => p.classList.toggle('thinking', on && i === seat)); if (seat >= 0 && on) updateTurnUI(); },

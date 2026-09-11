@@ -31,7 +31,7 @@ export function create(root, ctx) {
   function setZoom(on) {
     zoomed = on;
     boardWrap.style.width = on ? '200%' : '';
-    scroller.style.maxHeight = on ? scroller.getBoundingClientRect().width + 'px' : '';
+    scroller.style.aspectRatio = on ? '1 / 1' : ''; scroller.style.maxHeight = '';
     if (on) { const b = scroller.getBoundingClientRect(); scroller.scrollTo({ left: b.width / 2, top: b.width / 2 }); }
     window.dispatchEvent(new Event('resize')); // 플레이 화면이 다시 맞추도록
   }

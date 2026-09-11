@@ -162,7 +162,7 @@ export function apply(state, m) {
   const nt = advance(lead, r);
   const events = [{ type: 'move', seat, tokens: group, from: lead.pos, to: nt.pos, r, path: pathOf(lead, r) }];
   for (const i of group) s.tokens[seat][i] = { ...nt, hist: nt.hist };
-  if (nt.pos !== FINISH) {
+  if (nt.pos !== FINISH && nt.pos !== -1) {
     // 잡기
     let captured = 0;
     s.tokens.forEach((arr, os) => { if (os === seat) return; arr.forEach((t, i) => { if (t.pos === nt.pos) { s.tokens[os][i] = { pos: -1, route: 'O', idx: 0, hist: [] }; captured++; } }); });
@@ -170,7 +170,7 @@ export function apply(state, m) {
     const stacked = group.length + s.tokens[seat].filter((t, i) => !group.includes(i) && t.pos === nt.pos && t.route === nt.route).length;
     if (stacked > group.length) events.push({ type: 'stack', seat, at: nt.pos, count: stacked });
     if (nt.pos === 5 || nt.pos === 10 || nt.pos === 22) events.push({ type: 'shortcut', seat, at: nt.pos });
-  } else events.push({ type: 'finish', seat, count: group.length });
+  } else if (nt.pos === FINISH) events.push({ type: 'finish', seat, count: group.length });
   s.last = { seat, to: nt.pos };
   if (s.tokens[seat].every((t) => t.pos === FINISH)) { s.winner = seat; events.push({ type: 'win', seat }); return { state: s, events }; }
   return { state: endTurnIfDone(s, events), events };

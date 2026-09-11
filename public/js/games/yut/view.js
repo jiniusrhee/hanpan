@@ -157,6 +157,7 @@ export function create(root, ctx) {
           if (throwEv.again) { ctx.sound.play('bonus'); ctx.haptics.success(); ctx.fx.shake(); } else ctx.sound.play('pop');
           animating = false;
           renderTokens(state); renderCtl(state);
+          window.dispatchEvent(new Event('resize'));
         }, 800);
       } else if (state.lastThrow) renderSticks(state.lastThrow.sticks, false);
       else renderSticks(null, false);
@@ -194,6 +195,7 @@ export function create(root, ctx) {
           else if (sc) { const p = pxOf(sc.at); ctx.fx.sparkle(p.x, p.y, p.size * 0.5, 'gold'); ctx.fx.stamp('지름길!', { small: true, glow: 'rgba(255,194,71,.9)' }); ctx.sound.play('coin'); }
           else if (st) { ctx.fx.stamp('업기!', { small: true, glow: 'rgba(79,163,255,.9)' }); ctx.sound.play('pop'); }
           renderCtl(state);
+          window.dispatchEvent(new Event('resize'));
         }, total + 60);
       }
       if (!(animate && throwEv) && !(animate && moveEv)) { renderTokens(state); renderCtl(state); }

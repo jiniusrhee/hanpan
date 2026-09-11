@@ -79,7 +79,7 @@ function anomaliesOf(m, dev, screen) {
   if (m.overflowX || m.outX) a.push('overflow-x');
   if (screen === 'play') {
     if (m.needsScroll) a.push('scroll');
-    if (m.board && m.cell != null && dev.mobile && m.boardRatio < 0.55) a.push('small-board');
+    if (m.board && m.cell != null && dev.mobile && m.boardRatio < 0.45) a.push('small-board');
     if (m.cell != null && m.cell < 20) a.push('tiny-cells');
     if (m.actionVisible === false) a.push('actions-hidden');
     if (m.overlap) a.push('overlap');

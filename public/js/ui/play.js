@@ -317,7 +317,7 @@ export async function renderPlay() {
 
   function showResult(st) {
     let kind, title, emoji;
-    const winnerName = st.winner != null ? seats[st.winner].name : '';
+    const winnerName = st.winner != null && seats[st.winner] ? seats[st.winner].name : ''; // 혼자 하는 게임의 '패배'(winner=1)는 좌석이 없다
     if (n === 1) {
       kind = st.winner === 0 ? 'win' : 'lose';
       title = st.title || (kind === 'win' ? '클리어!' : '아쉬워요');

@@ -92,6 +92,7 @@ export async function renderPlay() {
   }
   function fitBoard(landscape) {
     boardArea.style.width = '';
+    if (meta.fit === false) return; // 표 중심 화면(야찌 등)은 줄여도 높이가 안 줄어 스크롤이 자연스럽다
     const vh = window.innerHeight, vw = window.innerWidth;
     if (landscape) {
       // 가로 모드: 양옆 열을 뺀 너비와 세로 여유 중 작은 쪽에 맞춘다
@@ -112,7 +113,7 @@ export async function renderPlay() {
       const r = boardArea.getBoundingClientRect();
       if (!r.height || !r.width) return;
       // 보드를 뺀 나머지 높이(패널, 상태줄, 간격, 여백, 상단바, 액션바)를 실제로 재서 남는 높이를 구한다
-      const kids = [...body.children].filter((el) => !el.classList.contains('hidden') && el.getBoundingClientRect().height > 0);
+      const kids = [...body.children].filter((el) => !el.classList.contains('hidden')); // 높이 0인 빈 줄도 간격(gap)은 차지한다
       const contentH = kids.reduce((a, el) => a + el.getBoundingClientRect().height, 0) + 8 * Math.max(0, kids.length - 1) + 8;
       const nonBoard = (contentH - r.height) + topbar.getBoundingClientRect().height + bottom.getBoundingClientRect().height;
       const availH = vh - nonBoard - 2;

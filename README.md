@@ -40,7 +40,7 @@ npm start          # http://localhost:3000
 
 ### 2) Render — 온라인 대전까지 되는 서버 버전 (무료)
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/jiniusrhee/hanpan)
 
 1. 위 버튼을 누르거나 [dashboard.render.com](https://dashboard.render.com) → **New → Blueprint**에서 이 저장소를 고르면 `render.yaml` 설정대로 배포돼요.
 2. 몇 분 뒤 `https://hanpan-xxxx.onrender.com` 같은 주소가 생겨요. 이 주소에서는 카카오톡 초대 링크와 온라인 대전이 모두 동작해요.

@@ -64,7 +64,7 @@ export function create(root, ctx) {
   }
   function renderTable(state, scoreEv) {
     table.innerHTML = '';
-    table.className = 'yc-table' + (state.n >= 3 ? ' dense' : '');
+    table.className = 'yc-table' + (state.n >= 3 || window.innerHeight < 720 ? ' dense' : '');
     const head = h('tr', null, h('th', { text: '족보' }), ...Array.from({ length: state.n }, (_, i) => h('th', { text: state.n === 1 ? '점수' : ctx.seats[i].name.slice(0, 6) })));
     table.appendChild(head);
     const canPick = ctx.canAct() && state.rolls > 0;

@@ -25,6 +25,7 @@ export const meta = {
   playerCounts: [1, 2, 3, 4],
   options: [],
   undo: false,
+  fit: false,
   bestHigher: true,
   resultDelay: 1000,
   rules: `## 목표

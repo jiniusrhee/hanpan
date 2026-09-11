@@ -15,17 +15,17 @@ const CHROME = process.env.CHROME || 'C:/Program Files/Google/Chrome/Application
 mkdirSync(OUT, { recursive: true });
 
 const DEVICES = [
-  { name: 'iphone-se', w: 375, h: 667, dpr: 2, mobile: true },
+  { name: 'iphone-se', w: 375, h: 667, dpr: 1, mobile: true },
   { name: 'iphone-14', w: 390, h: 844, dpr: 3, mobile: true },
-  { name: 'iphone-15-pro-max', w: 430, h: 932, dpr: 3, mobile: true },
-  { name: 'galaxy-s23', w: 360, h: 780, dpr: 3, mobile: true },
-  { name: 'galaxy-fold5-cover', w: 344, h: 882, dpr: 2.6, mobile: true },
-  { name: 'galaxy-fold5-open', w: 720, h: 840, dpr: 2, mobile: true },
-  { name: 'galaxy-flip', w: 360, h: 880, dpr: 3, mobile: true },
-  { name: 'phone-landscape', w: 844, h: 390, dpr: 3, mobile: true },
-  { name: 'ipad-mini', w: 744, h: 1133, dpr: 2, mobile: true },
-  { name: 'ipad-pro-12', w: 1024, h: 1366, dpr: 2, mobile: true },
-  { name: 'tablet-landscape', w: 1180, h: 820, dpr: 2, mobile: true },
+  { name: 'iphone-15-pro-max', w: 430, h: 932, dpr: 1, mobile: true },
+  { name: 'galaxy-s23', w: 360, h: 780, dpr: 2, mobile: true },
+  { name: 'galaxy-fold5-cover', w: 344, h: 882, dpr: 1, mobile: true },
+  { name: 'galaxy-fold5-open', w: 720, h: 840, dpr: 1, mobile: true },
+  { name: 'galaxy-flip', w: 360, h: 880, dpr: 1, mobile: true },
+  { name: 'phone-landscape', w: 844, h: 390, dpr: 1, mobile: true },
+  { name: 'ipad-mini', w: 744, h: 1133, dpr: 1, mobile: true },
+  { name: 'ipad-pro-12', w: 1024, h: 1366, dpr: 1, mobile: true },
+  { name: 'tablet-landscape', w: 1180, h: 820, dpr: 1, mobile: true },
   { name: 'laptop', w: 1366, h: 768, dpr: 1, mobile: false },
   { name: 'desktop-fhd', w: 1920, h: 1080, dpr: 1, mobile: false },
   { name: 'ultrawide', w: 2560, h: 1080, dpr: 1, mobile: false },
@@ -79,7 +79,7 @@ function anomaliesOf(m, dev, screen) {
   if (m.overflowX || m.outX) a.push('overflow-x');
   if (screen === 'play') {
     if (m.needsScroll) a.push('scroll');
-    if (m.board && dev.mobile && m.boardRatio < 0.55) a.push('small-board');
+    if (m.board && m.cell != null && dev.mobile && m.boardRatio < 0.55) a.push('small-board');
     if (m.cell != null && m.cell < 20) a.push('tiny-cells');
     if (m.actionVisible === false) a.push('actions-hidden');
     if (m.overlap) a.push('overlap');
@@ -98,6 +98,7 @@ let totalSteps = 0, totalGames = 0;
 for (const dev of devices) {
   const page = await browser.newPage();
   await page.setViewport({ width: dev.w, height: dev.h, deviceScaleFactor: dev.dpr, isMobile: dev.mobile, hasTouch: dev.mobile });
+  await page.evaluateOnNewDocument(() => { document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '*, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }'; document.head.appendChild(st); }); });
   let errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (msg) => { if (msg.type() === 'error') errors.push(msg.text()); });
@@ -148,7 +149,7 @@ for (const dev of devices) {
         const r = await page.evaluate(() => window.__hanpan.step());
         totalSteps++;
         if (r.stuck) { stuck++; await page.evaluate(() => window.__hanpan.restart()); await sleep(200); continue; }
-        await sleep(25);
+        await sleep(15);
         const m = await page.evaluate(METRICS);
         if (i === 0 || i === Math.floor(STEPS / 2)) sample = m;
         const an = anomaliesOf(m, dev, 'play');
@@ -174,7 +175,7 @@ for (const dev of devices) {
       counts.failed = 1; errors.push(String(e.message).slice(0, 200));
     }
     results.push({ device: dev.name, screen: 'play', game: cfg.id, players: cfg.players, steps: STEPS, games: gamesDone, stuck, anomalies: counts, sample, errors: [...new Set(errors)].slice(0, 4) });
-    process.stdout.write(`${dev.name.padEnd(20)} ${cfg.id.padEnd(12)} ${cfg.players}p  판:${String(gamesDone).padStart(3)}  ${Object.keys(counts).length ? JSON.stringify(counts) : 'OK'}\n`);
+    process.stdout.write(`${dev.name.padEnd(20)} ${cfg.id.padEnd(12)} ${cfg.players}p  판:${String(gamesDone).padStart(3)}  ${Math.round((Date.now() - tc) / 1000)}s  ${Object.keys(counts).length ? JSON.stringify(counts) : 'OK'}\n`);
     writeFileSync(path.join(OUT, 'sim-results.json'), JSON.stringify({ devices, configs, steps: STEPS, results }, null, 1));
   }
   await page.close();

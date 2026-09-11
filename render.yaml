@@ -1,0 +1,13 @@
+# Render 블루프린트: 저장소를 연결하면 이 설정대로 서버가 배포돼요 (온라인 대전 포함).
+# https://render.com/deploy 에서 저장소 URL을 넣거나, README의 "Deploy to Render" 버튼을 누르세요.
+services:
+  - type: web
+    name: hanpan
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "20"

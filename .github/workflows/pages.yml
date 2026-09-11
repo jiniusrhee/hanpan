@@ -1,0 +1,61 @@
+# GitHub Pages 배포: public/ 폴더를 정적 사이트로 올린다.
+# - 하위 경로(https://<user>.github.io/<repo>/)에서도 동작하도록 <base href>를 바꿔 넣는다.
+# - SPA 라우팅을 위해 404.html을 index.html로 복사한다.
+# - 정적 호스팅에서는 온라인 대전 서버가 없으므로 staticHost 플래그를 켠다 (WS_URL 시크릿/변수를 주면 그 서버로 온라인 대전 연결).
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build static site
+        env:
+          WS_URL: ${{ vars.WS_URL }}
+          KAKAO_JS_KEY: ${{ vars.KAKAO_JS_KEY }}
+        run: |
+          set -e
+          REPO="${GITHUB_REPOSITORY#*/}"
+          OWNER="${GITHUB_REPOSITORY_OWNER}"
+          # 사용자/조직 페이지(<owner>.github.io 저장소)는 루트, 그 외는 /<repo>/ 하위 경로
+          if [ "$REPO" = "$OWNER.github.io" ]; then BASE="/"; SITE="https://$OWNER.github.io/"; else BASE="/$REPO/"; SITE="https://$OWNER.github.io/$REPO/"; fi
+          rm -rf dist && cp -r public dist
+          sed -i "s#<base href=\"/\">#<base href=\"$BASE\">#" dist/index.html
+          sed -i "s#<meta property=\"og:url\" content=\"\">#<meta property=\"og:url\" content=\"$SITE\">#" dist/index.html
+          sed -i "s#<meta property=\"og:image\" content=\"img/og.png\">#<meta property=\"og:image\" content=\"${SITE}img/og.png\">#" dist/index.html
+          cp dist/index.html dist/404.html
+          # 정적 호스팅 설정
+          node -e "
+            const fs=require('fs');
+            const ws=process.env.WS_URL||'', kakao=process.env.KAKAO_JS_KEY||'';
+            fs.writeFileSync('dist/config.js', 'window.APP_CONFIG = ' + JSON.stringify({ kakaoJsKey: kakao, wsUrl: ws, staticHost: !ws }, null, 2) + ';\n');
+          "
+          echo "BASE=$BASE SITE=$SITE"
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

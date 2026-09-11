@@ -1,0 +1,22 @@
+{
+  "id": "./",
+  "name": "한판! 두뇌 보드게임 컬렉션",
+  "short_name": "한판!",
+  "description": "체스, 장기, 오셀로, 오목, 윷놀이까지. 친구와 온라인으로, 혹은 봇과 한판!",
+  "start_url": "./?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0e1016",
+  "theme_color": "#0e1016",
+  "lang": "ko",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "img/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "img/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "screenshots": [
+    { "src": "img/og.png", "sizes": "1200x630", "type": "image/png", "form_factor": "wide", "label": "한판! 보드게임 컬렉션" }
+  ]
+}

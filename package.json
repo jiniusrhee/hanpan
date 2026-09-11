@@ -1,0 +1,26 @@
+{
+  "name": "hanpan",
+  "version": "1.0.0",
+  "description": "한판! - 모바일 두뇌 보드게임 컬렉션 (온라인 대전 + 봇 대전)",
+  "main": "server/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node test/run.js",
+    "test:online": "node tools/online-test.js ./shots && node tools/online-test2.js ./shots",
+    "shots": "node tools/browser-test.js http://localhost:3210/ ./shots",
+    "icons": "node tools/make-icons.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "ws": "^8.18.0"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "puppeteer-core": "^25.10.0"
+  }
+}

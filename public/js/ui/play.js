@@ -86,6 +86,7 @@ export async function renderPlay() {
     const vw = window.innerWidth, vh = window.innerHeight;
     const landscape = vw > vh * 1.15 && vh < 620;
     root.classList.toggle('landscape', landscape);
+    root.classList.toggle('wide', vw > vh * 1.15); // 넓은 화면(태블릿 가로, PC)에서는 보조 컨트롤을 보드 옆에
     // 가로 모드에서는 액션바를 오른쪽 열(내 패널 아래)로 옮긴다
     if (landscape) { if (actionBar.parentElement !== bottomStrip) bottomStrip.appendChild(actionBar); }
     else if (actionBar.parentElement !== bottom) bottom.appendChild(actionBar);

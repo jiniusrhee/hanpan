@@ -8,7 +8,7 @@ const X = (i) => NODE_XY[i][0] + M, Y = (i) => NODE_XY[i][1] + M;
 export function create(root, ctx) {
   let selResult = 0;
   let animating = false;
-  const wrap = h('div', { style: { width: '100%' } });
+  const wrap = h('div', { class: 'side-layout' });
   root.appendChild(wrap);
   const style = h('style', { text: `
     .yut-sticks { display: flex; justify-content: center; gap: 10px; height: 52px; align-items: center; }
@@ -26,7 +26,7 @@ export function create(root, ctx) {
   root.appendChild(style);
 
   const s = svg('svg', { viewBox: `0 0 ${6 + M * 2} ${6 + M * 2}`, style: 'width:100%;height:auto;display:block' });
-  const boardEl = h('div', { style: { width: '100%', background: '#e9c98f', borderRadius: '14px', boxShadow: '0 10px 30px rgba(0,0,0,.4)' } }, s);
+  const boardEl = h('div', { class: 'side-main', style: { width: '100%', background: '#e9c98f', borderRadius: '14px', boxShadow: '0 10px 30px rgba(0,0,0,.4)' } }, s);
   wrap.appendChild(boardEl);
   // 선
   const L = (a, b) => svg('line', { x1: X(a), y1: Y(a), x2: X(b), y2: Y(b), stroke: '#5a3d22', 'stroke-width': 0.05 });
@@ -45,7 +45,7 @@ export function create(root, ctx) {
 
   const sticksEl = h('div', { class: 'yut-sticks' });
   const ctl = h('div', { class: 'yut-ctl' });
-  wrap.append(sticksEl, ctl);
+  wrap.append(h('div', { class: 'side-aux' }, sticksEl, ctl));
 
   function pxOf(i) { const r = s.getBoundingClientRect(), r0 = ctx.boardArea.getBoundingClientRect(); const k = r.width / (6 + M * 2); return { x: r.left - r0.left + X(i) * k, y: r.top - r0.top + Y(i) * k, size: k }; }
 

@@ -8,7 +8,11 @@ export function create(root, ctx) {
   let mode = 'move';   // move | h | v
   let preview = null;  // {o, r, c}
   const flip = ctx.perspective === 1;
-  const board = new GridBoard(root, {
+  const wrap = h('div', { class: 'side-layout' });
+  root.appendChild(wrap);
+  const mainWrap = h('div', { class: 'side-main' });
+  wrap.appendChild(mainWrap);
+  const board = new GridBoard(mainWrap, {
     rows: 9, cols: 9, style: 'plain', theme: 'wood', flip, className: 'quoridor',
     onCell(r, c) { onTap(r, c); },
   });
@@ -33,7 +37,7 @@ export function create(root, ctx) {
   }
   const confirmBtn = h('button', { class: 'btn btn-sm btn-good hidden', text: '✓ 여기에 놓기', onclick: () => { if (preview) submitWall(); } });
   bar.appendChild(confirmBtn);
-  root.appendChild(bar);
+  wrap.appendChild(h('div', { class: 'side-aux' }, bar));
 
   function setMode(m) {
     mode = m; preview = null;
@@ -111,6 +115,6 @@ export function create(root, ctx) {
       ctx.setSeatInfo(1, { score: `🧱${state.walls[1]}`, sub: `빨강 · 골까지 ${d1}칸` });
       if (ctx.canAct()) ctx.setStatus(mode === 'move' ? '갈 칸을 누르거나 벽 모드를 고르세요' : '벽을 놓을 위치를 누르세요');
     },
-    destroy() { board.destroy(); bar.remove(); },
+    destroy() { wrap.remove(); },
   };
 }

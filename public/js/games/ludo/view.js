@@ -28,10 +28,10 @@ const CENTER = [[6.8, 7.5], [7.5, 6.8], [8.2, 7.5], [7.5, 8.2]];
 export function create(root, ctx) {
   let animating = false;
   const s = svg('svg', { viewBox: '0 0 15 15', style: 'width:100%;height:auto;display:block' });
-  const el = h('div', { style: { width: '100%', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,.45)' } }, s);
-  root.appendChild(el);
+  const el = h('div', { class: 'side-main', style: { width: '100%', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,.45)' } }, s);
   const ctl = h('div', { class: 'row', style: { justifyContent: 'center', gap: '10px', marginTop: '8px', minHeight: '54px' } });
-  root.appendChild(ctl);
+  const wrap = h('div', { class: 'side-layout' }, el, h('div', { class: 'side-aux' }, ctl));
+  root.appendChild(wrap);
 
   // ---- 판 ----
   s.appendChild(svg('rect', { width: 15, height: 15, fill: '#f7f3ea' }));
@@ -187,6 +187,6 @@ export function create(root, ctx) {
       if (ctx.canAct()) ctx.setStatus(state.dice == null ? '주사위를 굴리세요' : '움직일 말을 누르세요');
       else ctx.setStatus(`<b>${ctx.seats[state.turn].name}</b>님 차례`);
     },
-    destroy() { el.remove(); ctl.remove(); },
+    destroy() { wrap.remove(); },
   };
 }

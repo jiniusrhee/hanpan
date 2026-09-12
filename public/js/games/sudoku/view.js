@@ -6,7 +6,7 @@ export function create(root, ctx) {
   let selected = null;
   let noteMode = false;
   let timer = null, startAt = 0;
-  const wrap = h('div', { style: { width: '100%' } });
+  const wrap = h('div', { class: 'side-layout' });
   root.appendChild(wrap);
   const style = h('style', { text: `
     .sd .cell { display: grid; place-items: center; font-weight: 700; font-size: clamp(16px, 5.2vw, 26px); cursor: pointer; color: #1d5fd6; position: relative; }
@@ -42,8 +42,9 @@ export function create(root, ctx) {
     h('button', { class: 'btn btn-sm', text: '💡 힌트', onclick: () => { if (!ctx.canAct()) return; ctx.submit({ hint: true, t: elapsed() }); } }),
   );
   for (let v = 1; v <= 9; v++) pad.appendChild(h('button', { text: v, dataset: { v }, onclick: () => input(v) }));
-  wrap.append(boardWrap, pad, tools);
-  new ResizeObserver(() => pad.classList.toggle('narrow', wrap.clientWidth < 330)).observe(wrap);
+  boardWrap.className = 'side-main';
+  wrap.append(boardWrap, h('div', { class: 'side-aux' }, pad, tools));
+  new ResizeObserver(() => requestAnimationFrame(() => pad.classList.toggle('narrow', boardWrap.clientWidth < 330))).observe(boardWrap);
   const elapsed = () => performance.now() - startAt;
 
   function select(i) { selected = i; ctx.sound.play('tap'); render(ctx.match.state); }

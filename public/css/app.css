@@ -405,6 +405,21 @@ svg { display: block; }
 /* 넓은 화면에서는 3~4인 패널도 가로형으로 */
 @media (min-width: 700px) { .seat-panel.compact { flex-direction: row; text-align: left; padding: 8px 12px; gap: 8px; } .seat-panel.compact .sp-body { width: auto; } .seat-panel.compact .sp-name { font-size: 13px; } .seat-panel.compact .sp-score { font-size: 18px; } }
 
+/* 보드 아래 컨트롤이 있는 게임: 가로 모드에서는 보드 옆 열로 옮긴다 */
+.side-layout { width: 100%; }
+.side-aux { display: contents; }
+.play.landscape .side-layout { display: flex; gap: 8px; align-items: flex-start; }
+.play.landscape .side-layout > .side-main { flex: 1; min-width: 0; }
+.play.landscape .side-aux { display: flex; flex-direction: column; gap: 6px; width: 136px; flex: none; }
+.play.landscape .side-aux > * { margin-top: 0 !important; }
+.play.landscape .side-aux .row, .play.landscape .side-aux .bk-ctl, .play.landscape .side-aux .yut-ctl { flex-wrap: wrap; }
+.play.landscape .side-aux .sd-pad { grid-template-columns: repeat(3, 1fr) !important; }
+.play.landscape .side-aux .sd-tools { flex-direction: column; }
+.play.landscape .side-aux .bk-tray { flex-direction: column; overflow-y: auto; overflow-x: hidden; max-height: 150px; padding-right: 2px; }
+.play.landscape .side-aux .bk-tray button { width: 44px; height: 44px; }
+.play.landscape .side-aux .bs-mini { width: 100%; }
+.play.landscape .side-aux .bs-tray { flex-wrap: wrap; overflow: visible; }
+
 /* 스켈레톤 / 로딩 */
 .loading { display: grid; place-items: center; padding: 40px; color: var(--muted); gap: 12px; }
 .spinner { width: 28px; height: 28px; border-radius: 50%; border: 3px solid var(--border-strong); border-top-color: var(--accent); animation: spin .8s linear infinite; }

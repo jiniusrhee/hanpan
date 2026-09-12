@@ -8,7 +8,7 @@ const MISS = `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="14" fill="#e
 const HIT = `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="34" fill="#ff4d2e" opacity=".9"/><path d="M30 30L70 70M70 30L30 70" stroke="#fff" stroke-width="12" stroke-linecap="round"/></svg>`;
 
 export function create(root, ctx) {
-  const wrap = h('div', { style: { width: '100%' } });
+  const wrap = h('div', { class: 'side-layout' });
   root.appendChild(wrap);
   const style = h('style', { text: `
     .bs-sea { position: relative; }
@@ -56,7 +56,7 @@ export function create(root, ctx) {
     clearAll(); phaseBuilt = 'place';
     draft = []; sel = 0; dir = 'h';
     const sea = h('div', { class: 'bs-sea' });
-    wrap.append(h('div', { class: 'bs-label' }, h('span', { text: '내 바다 · 함선을 배치하세요' })), sea);
+    wrap.append(h('div', { class: 'side-main' }, h('div', { class: 'bs-label' }, h('span', { text: '내 바다 · 함선을 배치하세요' })), sea));
     big = new GridBoard(sea, { rows: N, cols: N, style: 'plain', theme: 'blue', onCell(r, c) { onPlaceTap(r, c); } });
     shipLayerBig = h('div', { class: 'bs-ships' });
     big.el.appendChild(shipLayerBig);
@@ -65,7 +65,7 @@ export function create(root, ctx) {
       h('button', { class: 'btn btn-sm', text: '🔄 회전', onclick: () => { dir = dir === 'h' ? 'v' : 'h'; const cur = draft[sel]; if (cur) { const t = { ...cur, dir }; draft[sel] = null; if (fits(t)) draft[sel] = t; else draft[sel] = cur; } renderPlace(); ctx.sound.play('click'); } }),
       h('button', { class: 'btn btn-sm', text: '🎲 랜덤 배치', onclick: () => { draft = randomPlacement(makeRng()); renderPlace(); ctx.sound.play('dice'); } }),
       h('button', { class: 'btn btn-sm btn-primary', text: '✓ 배치 완료', onclick: () => { if (!validPlacement(draft)) { ctx.sound.play('error'); return; } ctx.submit({ place: draft }); } }));
-    wrap.append(tray, controls);
+    wrap.append(h('div', { class: 'side-aux' }, tray, controls));
     renderPlace();
   }
   function fits(s) {
@@ -105,7 +105,7 @@ export function create(root, ctx) {
     clearAll(); phaseBuilt = 'play';
     const miniWrap = h('div', { class: 'bs-mini bs-sea' });
     const seaWrap = h('div', { class: 'bs-sea big' });
-    wrap.append(h('div', { class: 'bs-label' }, h('span', { text: '내 바다' })), miniWrap, h('div', { class: 'bs-label' }, h('span', { text: '상대 바다 · 누르면 포격' }), h('span', { id: 'bs-left' })), seaWrap);
+    wrap.append(h('div', { class: 'side-aux' }, h('div', { class: 'bs-label' }, h('span', { text: '내 바다' })), miniWrap), h('div', { class: 'side-main' }, h('div', { class: 'bs-label' }, h('span', { text: '상대 바다 · 누르면 포격' }), h('span', { id: 'bs-left' })), seaWrap));
     mini = new GridBoard(miniWrap, { rows: N, cols: N, style: 'plain', theme: 'blue' });
     shipLayerMini = h('div', { class: 'bs-ships' }); mini.el.appendChild(shipLayerMini);
     big = new GridBoard(seaWrap, { rows: N, cols: N, style: 'plain', theme: 'blue', onCell(r, c) { if (!ctx.canAct()) return; const mv = ctx.legalMoves().find((m) => m.fire === r * N + c); if (!mv) { ctx.sound.play('error'); return; } ctx.submit(mv); } });

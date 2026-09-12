@@ -10,7 +10,7 @@ export function create(root, ctx) {
   let sel = null;     // 선택한 조각 id
   let orient = 0;
   let preview = null; // {piece, o, r, c, ok}
-  const wrap = h('div', { style: { width: '100%' } });
+  const wrap = h('div', { class: 'side-layout' });
   root.appendChild(wrap);
   const style = h('style', { text: `
     .bk-tray { display: flex; gap: 6px; overflow-x: auto; padding: 8px 2px; scrollbar-width: none; }
@@ -27,7 +27,8 @@ export function create(root, ctx) {
   const scroller = h('div', { style: { width: '100%', overflow: 'auto', WebkitOverflowScrolling: 'touch', borderRadius: '12px' } }, boardWrap);
   const tray = h('div', { class: 'bk-tray' });
   const ctl = h('div', { class: 'bk-ctl' });
-  wrap.append(scroller, ctl, tray);
+  scroller.classList.add('side-main');
+  wrap.append(scroller, h('div', { class: 'side-aux' }, ctl, tray));
   function setZoom(on) {
     zoomed = on;
     boardWrap.style.width = on ? '200%' : '';

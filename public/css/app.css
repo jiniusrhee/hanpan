@@ -408,6 +408,7 @@ svg { display: block; }
 /* 보드 아래 컨트롤이 있는 게임: 가로 모드에서는 보드 옆 열로 옮긴다 */
 .side-layout { width: 100%; }
 .side-aux { display: contents; }
+.play.wide { --board-max: min(100vw - 20px, 100dvh - 90px, 900px); } /* 옆 열이 너비를 나눠 쓰므로 여유를 주고, 높이는 fitBoard가 맞춘다 */
 .play.wide .side-layout { display: flex; gap: 10px; align-items: flex-start; }
 .play.wide .side-layout > .side-main { flex: 1; min-width: 0; }
 .play.wide .side-aux { display: flex; flex-direction: column; gap: 6px; width: 150px; flex: none; }

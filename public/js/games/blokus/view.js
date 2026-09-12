@@ -22,7 +22,7 @@ export function create(root, ctx) {
   ` });
   root.appendChild(style);
   // 작은 화면에서는 20×20 칸이 너무 작아 확대 모드를 제공한다 (보드가 2배가 되고 스크롤로 이동)
-  let zoomed = false;
+  let zoomed = false, autoZoomed = false;
   const boardWrap = h('div');
   const scroller = h('div', { style: { width: '100%', overflow: 'auto', WebkitOverflowScrolling: 'touch', borderRadius: '12px' } }, boardWrap);
   const tray = h('div', { class: 'bk-tray' });
@@ -149,7 +149,8 @@ export function create(root, ctx) {
 
   return {
     update(state, events, prev, animate) {
-      if (state.size !== size) { build(state.size); if (!zoomed && board.el.clientWidth / state.size < 20) setZoom(true); } // 칸이 20px보다 작으면 처음부터 확대
+      if (state.size !== size) build(state.size);
+      if (!zoomed && !autoZoomed && board.el.clientWidth > 0 && board.el.clientWidth / state.size < 20) { autoZoomed = true; setZoom(true); } // 칸이 20px보다 작으면 확대 모드로
       preview = null;
       drawCells(state, events, animate);
       drawAnchors(state); drawGhost(state);

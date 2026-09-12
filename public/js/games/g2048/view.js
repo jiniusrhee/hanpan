@@ -18,6 +18,7 @@ export function create(root, ctx) {
   const arrows = h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 56px)', gap: '6px', justifyContent: 'center', marginTop: '12px' } });
   const mk = (dir, label, col, row) => h('button', { class: 'btn btn-icon', text: label, style: { gridColumn: col, gridRow: row }, onclick: () => go(dir) });
   arrows.append(mk('up', '↑', 2, 1), mk('left', '←', 1, 2), mk('down', '↓', 2, 2), mk('right', '→', 3, 2));
+  if (window.matchMedia('(pointer: coarse)').matches) arrows.classList.add('hidden');
   wrap.append(boardWrap, arrows);
 
   function go(dir) {

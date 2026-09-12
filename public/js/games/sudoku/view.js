@@ -18,7 +18,8 @@ export function create(root, ctx) {
     .sd .cell.done { animation: pop .3s var(--ease-pop); }
     .sd .notes { position: absolute; inset: 2px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); font-size: clamp(7px, 2.2vw, 10px); color: #666; font-weight: 600; line-height: 1; }
     .sd .notes span { display: grid; place-items: center; }
-    .sd-pad { display: grid; grid-template-columns: repeat(9, 1fr); gap: 5px; margin-top: 10px; }
+    .sd-pad { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; margin-top: 10px; }
+    .sd-pad.narrow { grid-template-columns: repeat(5, 1fr); }
     .sd-pad button { min-height: 44px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); font-size: 20px; font-weight: 800; position: relative; }
     .sd-pad button:active { transform: scale(.94); }
     .sd-pad button.dim { opacity: .3; }
@@ -42,6 +43,7 @@ export function create(root, ctx) {
   );
   for (let v = 1; v <= 9; v++) pad.appendChild(h('button', { text: v, dataset: { v }, onclick: () => input(v) }));
   wrap.append(boardWrap, pad, tools);
+  new ResizeObserver(() => pad.classList.toggle('narrow', wrap.clientWidth < 330)).observe(wrap);
   const elapsed = () => performance.now() - startAt;
 
   function select(i) { selected = i; ctx.sound.play('tap'); render(ctx.match.state); }

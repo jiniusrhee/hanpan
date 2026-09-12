@@ -19,7 +19,7 @@ export function create(root, ctx) {
     @keyframes yc-roll { 0% { transform: translateY(-40px) rotateX(0) rotateZ(0) scale(1.15); opacity: .6; } 60% { transform: translateY(4px) rotateX(360deg) rotateZ(180deg) scale(1); opacity: 1; } 80% { transform: translateY(-3px) rotateX(370deg) rotateZ(175deg); } 100% { transform: translateY(0) rotateX(360deg) rotateZ(180deg); } }
     .yc-die.empty { opacity: .35; }
     .yc-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 14px; background: var(--surface); border-radius: 12px; overflow: hidden; }
-    .yc-table th, .yc-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: center; }
+    .yc-table th, .yc-table td { padding: 5px 8px; border-bottom: 1px solid var(--border); text-align: center; }
     .yc-table th:first-child, .yc-table td:first-child { text-align: left; font-weight: 700; }
     .yc-table th { background: var(--surface-2); font-size: 12px; color: var(--muted); }
     .yc-table td.cur { background: var(--accent-soft); }
@@ -64,7 +64,7 @@ export function create(root, ctx) {
   }
   function renderTable(state, scoreEv) {
     table.innerHTML = '';
-    table.className = 'yc-table' + (state.n >= 3 || window.innerHeight < 900 ? ' dense' : '');
+    table.className = 'yc-table' + (state.n >= 3 || window.innerHeight < 1000 ? ' dense' : '');
     const head = h('tr', null, h('th', { text: '족보' }), ...Array.from({ length: state.n }, (_, i) => h('th', { text: state.n === 1 ? '점수' : ctx.seats[i].name.slice(0, 6) })));
     table.appendChild(head);
     const canPick = ctx.canAct() && state.rolls > 0;

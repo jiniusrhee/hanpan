@@ -20,7 +20,7 @@ export function create(root, ctx) {
     .bs-ship.ghost { opacity: .55; }
     .bs-ship.bad { background: #ff3b3b; opacity: .6; }
     .bs-tray { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
-    .bs-tray button { display: flex; align-items: center; gap: 4px; padding: 6px 10px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
+    .bs-tray button { display: flex; align-items: center; gap: 4px; min-height: 36px; padding: 6px 10px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
     .bs-tray button.sel { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
     .bs-tray button.done { opacity: .45; }
     .bs-tray .bar { display: inline-flex; gap: 2px; }

@@ -96,7 +96,7 @@ export async function renderPlay() {
     const vh = window.innerHeight, vw = window.innerWidth;
     if (landscape) {
       // 가로 모드: 양옆 열을 뺀 너비와 세로 여유 중 작은 쪽에 맞춘다
-      const availH = vh - topbar.getBoundingClientRect().height - statusEl.getBoundingClientRect().height - 24;
+      const availH = vh - topbar.getBoundingClientRect().height - 16; // 가로 모드에서 상태줄은 옆 열에 있다
       const sideW = Math.max(150, Math.min(260, vw * 0.22));
       const availW = vw - sideW * 2 - 40;
       boardArea.style.width = Math.max(200, Math.floor(availW)) + 'px';

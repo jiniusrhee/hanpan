@@ -64,10 +64,11 @@ export async function renderPlay() {
   const boardArea = h('div', { class: 'board-area' });
   const statusEl = h('div', { class: 'board-status' });
   const banner = h('div', { class: 'banner hidden' });
-  const panels = seats.map((s, i) => makePanel(i, n > 2 || n === 1 && false));
+  const stackedSeats = n === 2 && meta.fit !== false; // 위/아래로 나누는 2인 배치
+  const panels = seats.map((s, i) => makePanel(i, n > 2 || (n === 2 && !stackedSeats)));
   const topStrip = h('div', { class: 'seats-strip top' });
   const bottomStrip = h('div', { class: 'seats-strip bottom' });
-  if (n === 2) { topStrip.appendChild(panels[1 - perspective]); bottomStrip.appendChild(panels[perspective]); }
+  if (stackedSeats) { topStrip.appendChild(panels[1 - perspective]); bottomStrip.appendChild(panels[perspective]); }
   else { panels.forEach((p) => topStrip.appendChild(p)); }
   body.append(banner, topStrip, boardArea, statusEl, bottomStrip);
   const actionBar = h('div', { class: 'action-bar' });

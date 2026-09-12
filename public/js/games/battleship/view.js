@@ -19,7 +19,9 @@ export function create(root, ctx) {
     .bs-ship.sunk { background: linear-gradient(180deg, #6b2a2a, #3a1414); border-color: rgba(255,90,90,.5); }
     .bs-ship.ghost { opacity: .55; }
     .bs-ship.bad { background: #ff3b3b; opacity: .6; }
-    .bs-tray { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
+    .bs-tray { display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; justify-content: safe center; margin-top: 8px; padding: 2px; }
+    .bs-tray::-webkit-scrollbar { display: none; }
+    .bs-tray button { flex: none; }
     .bs-tray button { display: flex; align-items: center; gap: 4px; min-height: 36px; padding: 6px 10px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
     .bs-tray button.sel { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
     .bs-tray button.done { opacity: .45; }

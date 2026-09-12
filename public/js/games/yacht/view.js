@@ -9,7 +9,7 @@ export function create(root, ctx) {
   const wrap = h('div', { style: { width: '100%' } });
   root.appendChild(wrap);
   const style = h('style', { text: `
-    .yc-dice { display: flex; justify-content: center; gap: 10px; padding: 10px 0; perspective: 600px; }
+    .yc-dice { display: flex; justify-content: center; gap: 10px; padding: 6px 0 4px; perspective: 600px; }
     .yc-die { width: 54px; height: 54px; border-radius: 12px; background: linear-gradient(160deg, #fff, #e6e6ea); box-shadow: 0 6px 14px rgba(0,0,0,.45), inset 0 -4px 0 rgba(0,0,0,.12); display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 9px; gap: 2px; cursor: pointer; transition: transform .15s, box-shadow .15s; position: relative; }
     .yc-die i { border-radius: 50%; background: transparent; }
     .yc-die i.on { background: #222; }
@@ -18,7 +18,7 @@ export function create(root, ctx) {
     .yc-die.roll { animation: yc-roll .6s cubic-bezier(.3,.7,.4,1) both; }
     @keyframes yc-roll { 0% { transform: translateY(-40px) rotateX(0) rotateZ(0) scale(1.15); opacity: .6; } 60% { transform: translateY(4px) rotateX(360deg) rotateZ(180deg) scale(1); opacity: 1; } 80% { transform: translateY(-3px) rotateX(370deg) rotateZ(175deg); } 100% { transform: translateY(0) rotateX(360deg) rotateZ(180deg); } }
     .yc-die.empty { opacity: .35; }
-    .yc-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 14px; background: var(--surface); border-radius: 12px; overflow: hidden; }
+    .yc-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 0; background: var(--surface); border-radius: 12px; overflow: hidden; }
     .yc-table th, .yc-table td { padding: 5px 8px; border-bottom: 1px solid var(--border); text-align: center; }
     .yc-table th:first-child, .yc-table td:first-child { text-align: left; font-weight: 700; }
     .yc-table th { background: var(--surface-2); font-size: 12px; color: var(--muted); }
@@ -35,9 +35,9 @@ export function create(root, ctx) {
   ` });
   root.appendChild(style);
   const diceRow = h('div', { class: 'yc-dice' });
-  const ctl = h('div', { class: 'row', style: { justifyContent: 'center', gap: '8px', minHeight: '48px', marginTop: '12px' } });
+  const ctl = h('div', { class: 'row', style: { justifyContent: 'center', gap: '8px', minHeight: '40px', marginTop: '6px' } });
   const table = h('table', { class: 'yc-table' });
-  const tableWrap = h('div', { style: { width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch', marginTop: '10px' } }, table);
+  const tableWrap = h('div', { style: { width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch', marginTop: '6px' } }, table);
   wrap.append(diceRow, ctl, tableWrap);
 
   function dieEl(v, i, opts = {}) {

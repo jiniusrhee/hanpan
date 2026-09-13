@@ -62,11 +62,13 @@ export function legalMoves(state) {
   return out;
 }
 
+const cellOk = (state, i) => Number.isInteger(i) && i >= 0 && i < state.rows * state.cols;
+
 export function isLegal(state, m) {
-  if (state.over) return false;
-  if (m.open != null) return !state.open[m.open] && !state.flag[m.open];
-  if (m.flag != null) return !state.open[m.flag];
-  if (m.chord != null) return state.open[m.chord] && state.adj && state.adj[m.chord] > 0;
+  if (!m || state.over) return false;
+  if (m.open != null) return cellOk(state, m.open) && !state.open[m.open] && !state.flag[m.open];
+  if (m.flag != null) return cellOk(state, m.flag) && !state.open[m.flag];
+  if (m.chord != null) return cellOk(state, m.chord) && state.open[m.chord] && !!state.adj && state.adj[m.chord] > 0;
   return false;
 }
 

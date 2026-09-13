@@ -3,3 +3,6 @@ node_modules/
 *.log
 shots/
 NVIDIA Corporation/
+sim/
+sim10k/
+bots/

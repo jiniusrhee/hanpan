@@ -8,6 +8,8 @@
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
     "test": "node test/run.js",
+    "test:mass": "node test/sim10k.js --games 10000 --out ./sim10k",
+    "test:bots": "node test/bots.js --games 10 --out ./bots",
     "test:online": "node tools/online-test.js ./shots && node tools/online-test2.js ./shots",
     "shots": "node tools/browser-test.js http://localhost:3210/ ./shots",
     "icons": "node tools/make-icons.js"

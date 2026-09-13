@@ -104,6 +104,20 @@ export function anchors(state, seat) {
   return out;
 }
 
+// 놓을 수 있는 자리가 하나라도 있는지 (전체 목록을 만들지 않고 첫 성공에서 바로 반환)
+export function canMove(state, seat) {
+  const anc = anchors(state, seat);
+  if (!anc.length) return false;
+  for (const piece of state.hands[seat]) {
+    const orients = ORIENTS[piece];
+    for (let o = 0; o < orients.length; o++) {
+      const cells = orients[o];
+      for (const [ar, ac] of anc) for (const [kr, kc] of cells) if (validPlacement(state, seat, { piece, o, r: ar - kr, c: ac - kc })) return true;
+    }
+  }
+  return false;
+}
+
 export function movesFor(state, seat) {
   const anc = anchors(state, seat);
   const out = [];
@@ -126,7 +140,7 @@ export function legalMoves(state) {
   if (state.over) return [];
   return movesFor(state, state.turn);
 }
-export function isLegal(state, m) { return !state.over && validPlacement(state, state.turn, m); }
+export function isLegal(state, m) { return !!m && !state.over && validPlacement(state, state.turn, m); }
 
 export function apply(state, m) {
   const seat = state.turn;
@@ -144,7 +158,7 @@ export function apply(state, m) {
   let t = seat, found = false;
   for (let k = 1; k <= state.n; k++) {
     t = (seat + k) % state.n;
-    if (movesFor(next, t).length) { found = true; break; }
+    if (canMove(next, t)) { found = true; break; }
   }
   if (found) { if (t !== (seat + 1) % state.n) events.push({ type: 'skip', from: (seat + 1) % state.n, to: t }); next.turn = t; }
   else { next.over = true; events.push({ type: 'end' }); }
@@ -172,10 +186,13 @@ export function ai(state, level = 2) {
   const myAnc = anchors(state, seat).length;
   const oppAnc = state.n === 2 ? anchors(state, 1 - seat).length : 0;
   const early = state.placed[seat] < 25;
+  // 큰 조각부터 살펴보고, 시간이 다 되면 남은 후보는 조각 크기만으로 평가한다 (느린 기기에서도 오래 기다리지 않게)
+  const deadline = performance.now() + (level === 3 ? 1800 : level === 2 ? 900 : 100);
+  moves.sort((a, b) => ORIENTS[b.piece][b.o].length - ORIENTS[a.piece][a.o].length);
   const scored = moves.map((m) => {
     const cells = ORIENTS[m.piece][m.o].length;
     let v = cells * 10;
-    if (level >= 2) {
+    if (level >= 2 && performance.now() < deadline) {
       const next = apply(state, m).state;
       v += (anchors(next, seat).length - myAnc) * 2.2;
       if (state.n === 2) v += (oppAnc - anchors(next, 1 - seat).length) * (level === 3 ? 3 : 2);

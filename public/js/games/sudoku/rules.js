@@ -102,11 +102,14 @@ export function legalMoves(state) {
   return out;
 }
 
+const cellOk = (i) => Number.isInteger(i) && i >= 0 && i < 81;
+const digitOk = (v) => Number.isInteger(v) && v >= 1 && v <= 9;
+
 export function isLegal(state, m) {
-  if (state.over) return false;
-  if (m.set != null) return !state.puzzle[m.set] && m.v >= 1 && m.v <= 9;
-  if (m.clear != null) return !state.puzzle[m.clear];
-  if (m.note != null) return !state.puzzle[m.note] && !state.grid[m.note] && m.v >= 1 && m.v <= 9;
+  if (!m || state.over) return false;
+  if (m.set != null) return cellOk(m.set) && !state.puzzle[m.set] && digitOk(m.v);
+  if (m.clear != null) return cellOk(m.clear) && !state.puzzle[m.clear];
+  if (m.note != null) return cellOk(m.note) && !state.puzzle[m.note] && !state.grid[m.note] && digitOk(m.v);
   if (m.hint) return state.grid.some((v, i) => v !== state.solution[i]);
   return false;
 }

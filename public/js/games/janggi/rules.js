@@ -269,7 +269,22 @@ const order = (state, moves) => moves.slice().sort((a, b) => {
   const vb = b.pass ? -100 : b.setup ? 0 : (state.board[b.to] ? VAL[typeOf(state.board[b.to])] * 10 - VAL[typeOf(state.board[b.from])] : 0);
   return vb - va;
 });
-const searchRules = { legalMoves: (s) => legalMoves(s).filter((m) => !m.pass || legalMoves(s).length === 1), apply, status };
+// 탐색에서는 '한 수 쉬기'를 빼되, 빅장 상황에서는 남겨 둔다 (상대가 쉬어서 무승부를 받아들일 수 있다는 걸 알아야 이기고 있을 때 빅장을 만들지 않는다)
+const searchRules = { legalMoves: (s) => { const ms = legalMoves(s); return ms.length === 1 || s.facing ? ms : ms.filter((m) => !m.pass); }, apply, status };
+
+// 지고 있지 않을 때는 빅장(사실상 무승부 제안)이 되는 수를 처음부터 빼 둔다 — 얕은 탐색으로는 상대가 그냥 받아들인다는 걸 못 보기 때문
+function rulesFor(root) {
+  if (evaluate(root, root.turn) < 0) return searchRules;
+  return {
+    ...searchRules,
+    legalMoves: (s) => {
+      const ms = searchRules.legalMoves(s);
+      if (s !== root) return ms;
+      const safe = ms.filter((m) => !m.pass && !isFacing(makeMove(s, m).next.board));
+      return safe.length ? safe : ms;
+    },
+  };
+}
 
 export function ai(state, level = 2) {
   const rng = makeRng();
@@ -278,9 +293,10 @@ export function ai(state, level = 2) {
   if (state.phase === 'setup') return moves[rng.int(moves.length)];
   const nonPass = moves.filter((m) => !m.pass);
   if (!nonPass.length) return moves[0];
-  if (level === 1) return alphabeta(searchRules, state, evaluate, { depth: 1, timeMs: 400, randomness: 0.5, rng, orderMoves: order, captures, qDepth: 2 });
-  if (level === 2) return alphabeta(searchRules, state, evaluate, { depth: 2, timeMs: 1200, randomness: 0.05, rng, orderMoves: order, captures, qDepth: 4 });
-  return alphabeta(searchRules, state, evaluate, { depth: 4, timeMs: 2600, rng, orderMoves: order, captures, qDepth: 4 });
+  const rules = rulesFor(state);
+  if (level === 1) return alphabeta(rules, state, evaluate, { depth: 1, timeMs: 400, randomness: 0.5, rng, orderMoves: order, captures, qDepth: 2 });
+  if (level === 2) return alphabeta(rules, state, evaluate, { depth: 2, timeMs: 1200, randomness: 0.05, rng, orderMoves: order, captures, qDepth: 4 });
+  return alphabeta(rules, state, evaluate, { depth: 4, timeMs: 2600, rng, orderMoves: order, captures, qDepth: 4 });
 }
 
 export { colorOf, typeOf, VAL, G as GENERAL, ROWS, COLS };

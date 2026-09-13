@@ -51,7 +51,8 @@ export class Match {
   legalMoves(state = this.state) { return this.rules.legalMoves(state); }
 
   isLegal(move, state = this.state) {
-    if (this.rules.isLegal) return this.rules.isLegal(state, move);
+    if (!move || typeof move !== 'object') return false;
+    if (this.rules.isLegal) { try { return !!this.rules.isLegal(state, move); } catch { return false; } }
     const k = moveKey(move);
     return this.rules.legalMoves(state).some((m) => moveKey(m) === k);
   }

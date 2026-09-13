@@ -93,7 +93,7 @@ export function legalMoves(state) {
 }
 
 export function isLegal(state, m) {
-  if (state.over) return false;
+  if (!m || state.over) return false;
   if (m.roll) return state.rolls < 3 && Array.isArray(m.held) && m.held.length === 5 && (state.rolls > 0 || m.held.every((x) => !x)) && !m.held.every(Boolean);
   if (m.score != null) return state.rolls > 0 && state.scores[state.turn][m.score] === null;
   return false;
@@ -170,7 +170,9 @@ export function ai(state, level = 2) {
   if (state.rolls >= 3) return { score: cur.cat };
   if (level === 1) {
     if (rng.next() < 0.4) return { score: cur.cat };
-    return { roll: true, held: heuristicHold(dice) };
+    const held = heuristicHold(dice);
+    if (held.every(Boolean)) return { score: cur.cat }; // 다 잡고 굴릴 수는 없으니 그냥 기록
+    return { roll: true, held };
   }
   // 몬테카를로: 고정 패턴별 기대 점수
   const samples = level === 3 ? 60 : 25;

@@ -80,7 +80,7 @@ export function distance(state, seat) {
 }
 
 function wallOk(state, o, r, c) {
-  if (r < 0 || r > 7 || c < 0 || c > 7) return false;
+  if (!Number.isInteger(r) || !Number.isInteger(c) || r < 0 || r > 7 || c < 0 || c > 7) return false;
   if (o === 'h') { if (state.hw[r * 8 + c] || (c > 0 && state.hw[r * 8 + c - 1]) || (c < 7 && state.hw[r * 8 + c + 1]) || state.vw[r * 8 + c]) return false; }
   else { if (state.vw[r * 8 + c] || (r > 0 && state.vw[(r - 1) * 8 + c]) || (r < 7 && state.vw[(r + 1) * 8 + c]) || state.hw[r * 8 + c]) return false; }
   const s = placeWall(state, o, r, c);
@@ -106,6 +106,7 @@ export function legalMoves(state) {
 }
 
 export function isLegal(state, m) {
+  if (!m || status(state).over) return false;
   if (m.type === 'move') return pawnMoves(state, state.turn).some((x) => x.r === m.r && x.c === m.c);
   if (m.type === 'wall') return state.walls[state.turn] > 0 && (m.o === 'h' || m.o === 'v') && wallOk(state, m.o, m.r, m.c);
   return false;

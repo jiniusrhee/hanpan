@@ -45,7 +45,7 @@ export function validPlacement(ships) {
   for (let i = 0; i < ships.length; i++) {
     const s = ships[i];
     if (!s || s.len !== SHIPS[i].len || (s.dir !== 'h' && s.dir !== 'v')) return false;
-    if (s.r < 0 || s.c < 0 || (s.dir === 'h' ? s.c + s.len > N || s.r >= N : s.r + s.len > N || s.c >= N)) return false;
+    if (!Number.isInteger(s.r) || !Number.isInteger(s.c) || s.r < 0 || s.c < 0 || (s.dir === 'h' ? s.c + s.len > N || s.r >= N : s.r + s.len > N || s.c >= N)) return false;
     for (const cell of shipCells(s)) { if (used.has(cell)) return false; used.add(cell); }
   }
   return true;
@@ -86,8 +86,9 @@ export function legalMoves(state) {
 }
 
 export function isLegal(state, m) {
+  if (!m || status(state).over) return false;
   if (state.phase === 'place') return !!m.place && validPlacement(m.place);
-  return typeof m.fire === 'number' && m.fire >= 0 && m.fire < 100 && !state.shots[state.turn][m.fire];
+  return Number.isInteger(m.fire) && m.fire >= 0 && m.fire < 100 && !state.shots[state.turn][m.fire];
 }
 
 export function apply(state, m) {

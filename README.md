@@ -80,6 +80,7 @@ public/            정적 파일 (빌드 없이 그대로 서비스)
   js/games/<id>/   게임별 rules.js(규칙+봇) / view.js(그리기+입력)
   sw.js            서비스 워커 (오프라인 캐시)
 test/run.js        규칙 엔진 자동 점검 (무작위 플레이아웃 + 봇 합법성)
+test/sim10k.js     대량 시뮬레이션 (설정당 1만 판, 병렬) · test/invariants.js 게임별 규칙 불변식 · test/bots.js 봇 품질
 tools/             아이콘 생성, 브라우저 스크린샷/온라인 흐름/기기별 레이아웃 시뮬레이션
 .github/workflows  GitHub Pages 자동 배포
 render.yaml        Render 블루프린트 (서버 배포)
@@ -96,6 +97,8 @@ render.yaml        Render 블루프린트 (서버 배포)
 
 ```bash
 npm test                                   # 모든 게임 규칙 엔진 점검 (--games 100 으로 판 수 지정)
+npm run test:mass                          # 게임 × 인원수마다 10,000판 병렬 시뮬레이션 (규칙 불변식·잘못된 입력·봇 합법성·결정성 검사, 약 15분)
+npm run test:bots                          # 봇 품질 점검 (쉬움/보통 vs 무작위, 어려움 vs 쉬움 승률과 응답 시간, 약 15분)
 npm run shots                              # 헤드리스 크롬 스크린샷 (localhost:3210 서버 필요)
 npm run test:online                        # 브라우저 여러 개로 온라인 대전 흐름 점검 (기본 localhost:3210, SERVER=https://... 로 배포 서버 지정)
 node tools/sim-devices.js --out ./sim      # 15종 기기 × 모든 게임 × 인원수 레이아웃 시뮬레이션 (설정당 100턴)

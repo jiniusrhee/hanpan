@@ -3,6 +3,7 @@
 import puppeteer from 'puppeteer-core';
 import path from 'node:path';
 const OUT = process.argv[2];
+const SERVER = process.env.SERVER || 'http://localhost:3210';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const CHROME = process.env.CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new', args: ['--no-sandbox'] });
@@ -21,7 +22,7 @@ const clickText = async (page, sel, text) => { for (const b of await page.$$(sel
 
 // ---- 1) 오셀로: 방장 + 봇, 관전자 ----
 const A = await mk('A');
-await A.goto('http://localhost:3210/game/othello', { waitUntil: 'networkidle0' });
+await A.goto(`${SERVER}/game/othello`, { waitUntil: 'networkidle0' });
 await A.waitForSelector('.mode-btn'); await clickText(A, '.mode-btn', '친구와 온라인'); await sleep(200);
 await A.click('.btn-primary.btn-lg'); await A.waitForSelector('.room-code .rc-value');
 const code = await A.$eval('.room-code .rc-value', (e) => e.textContent.trim());
@@ -30,7 +31,7 @@ await clickText(A, '.screen .btn-primary.btn-lg', '시작');
 await A.waitForSelector('.board .cell'); await sleep(500);
 // 관전자 참가
 const C = await mk('C');
-await C.goto(`http://localhost:3210/join/${code}`, { waitUntil: 'networkidle0' });
+await C.goto(`${SERVER}/join/${code}`, { waitUntil: 'networkidle0' });
 await C.waitForSelector('.board .cell', { timeout: 10000 }); await sleep(500);
 // 방장이 한 수 두고 봇 응답 기다림
 const myTurnA = (await A.$eval('.board-status', (e) => e.textContent)).includes('내 차례');
@@ -44,12 +45,12 @@ if (piecesA !== piecesC || piecesA < 6) errors.push('오셀로 봇/관전 동기
 
 // ---- 2) 윷놀이 4인: 방장 + 손님 + 봇 2 ----
 const H = await mk('H'), G = await mk('G');
-await H.goto('http://localhost:3210/game/yut', { waitUntil: 'networkidle0' });
+await H.goto(`${SERVER}/game/yut`, { waitUntil: 'networkidle0' });
 await H.waitForSelector('.mode-btn'); await clickText(H, '.mode-btn', '친구와 온라인'); await sleep(200);
 await clickText(H, '.seg button', '4명'); await sleep(100);
 await H.click('.btn-primary.btn-lg'); await H.waitForSelector('.room-code .rc-value');
 const code2 = await H.$eval('.room-code .rc-value', (e) => e.textContent.trim());
-await G.goto(`http://localhost:3210/join/${code2}`, { waitUntil: 'networkidle0' });
+await G.goto(`${SERVER}/join/${code2}`, { waitUntil: 'networkidle0' });
 await G.waitForSelector('.seat-list'); await sleep(500);
 await clickText(H, '.screen .btn-primary.btn-lg', '시작');
 await H.waitForSelector('.yut-ctl', { timeout: 10000 }); await G.waitForSelector('.yut-ctl', { timeout: 10000 });

@@ -2,8 +2,8 @@
 
 친구와 **카카오톡 초대 링크**로 바로 붙는 온라인 대전, **봇 대전**, **한 기기에서 번갈아 하기**를 모두 지원하는 웹 보드게임 모음이에요. 앱 설치 없이 링크 하나로 열리고, 홈 화면에 추가하면 앱처럼 쓸 수 있어요(PWA).
 
-- 🌐 웹(정적) 버전: **https://jiniusrhee.github.io/hanpan/** — 봇 대전·한 기기 대전·혼자 하기 + 앱 설치 (GitHub Pages, 푸시하면 자동 배포)
-- 🔗 서버 버전(온라인 대전 포함): Render 등에 배포한 주소 (아래 "배포하기" 참고)
+- 🌐 앱 주소: **https://jiniusrhee.github.io/hanpan/** — GitHub Pages. 봇 대전·한 기기 대전·혼자 하기·앱 설치, 그리고 아래 서버와 연결돼 온라인 대전까지 돼요. (푸시하면 자동 배포)
+- 🔗 대전 서버: **https://hanpan.onrender.com** — Render 무료 플랜. 이 주소로 직접 접속해도 모든 기능이 되고, 카카오톡 초대 링크 미리보기(누가 무슨 게임에 초대했는지)는 이 주소에서 만든 방이 가장 예뻐요.
 
 ## 게임 목록 (23종)
 
@@ -36,7 +36,7 @@ npm start          # http://localhost:3000
 1. GitHub에서 저장소 **Settings → Pages → Build and deployment → Source**를 **GitHub Actions**로 설정해요.
 2. `main` 브랜치에 푸시하면 1~2분 뒤 `https://<아이디>.github.io/<저장소>/`에서 열려요.
 3. 정적 호스팅에는 WebSocket 서버가 없어서 **온라인 대전 메뉴는 꺼진 상태**로 나와요. (봇 대전, 한 기기 대전, 혼자 하기, 앱 설치는 모두 됩니다.)
-4. 아래 2)로 서버를 따로 띄웠다면, 저장소 **Settings → Secrets and variables → Actions → Variables**에 `WS_URL` = `wss://<서버주소>/ws`를 추가하고 다시 배포하면 Pages 버전에서도 온라인 대전이 켜져요.
+4. 아래 2)로 서버를 따로 띄웠다면, 저장소 **Settings → Secrets and variables → Actions → Variables**에 `WS_URL` = `wss://<서버주소>/ws`를 추가하고 다시 배포하면 Pages 버전에서도 온라인 대전이 켜져요. (이 저장소는 `WS_URL = wss://hanpan.onrender.com/ws`로 설정돼 있어요.)
 
 ### 2) Render — 온라인 대전까지 되는 서버 버전 (무료)
 
@@ -97,7 +97,7 @@ render.yaml        Render 블루프린트 (서버 배포)
 ```bash
 npm test                                   # 모든 게임 규칙 엔진 점검 (--games 100 으로 판 수 지정)
 npm run shots                              # 헤드리스 크롬 스크린샷 (localhost:3210 서버 필요)
-npm run test:online                        # 브라우저 여러 개로 온라인 대전 흐름 점검
+npm run test:online                        # 브라우저 여러 개로 온라인 대전 흐름 점검 (기본 localhost:3210, SERVER=https://... 로 배포 서버 지정)
 node tools/sim-devices.js --out ./sim      # 15종 기기 × 모든 게임 × 인원수 레이아웃 시뮬레이션 (설정당 100턴)
 ```
 

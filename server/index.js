@@ -131,6 +131,8 @@ function detach(ws) {
   const room = rooms.get(ctx.code);
   ws.ctx = null;
   if (!room) return;
+  // 같은 토큰으로 이미 다른 소켓이 살아 있으면(새로고침 재접속 뒤 늦게 닫힌 예전 소켓) 자리 상태를 건드리지 않는다
+  for (const c of wss.clients) if (c !== ws && c.ctx && c.ctx.token === ctx.token && c.readyState === c.OPEN) return;
   if (ctx.seat >= 0) {
     const s = room.seats[ctx.seat];
     if (s && s.token === ctx.token) {
@@ -183,6 +185,7 @@ const handlers = {
     detach(ws);
     const room = rooms.get(m.code);
     if (!room) return fail(ws, '방이 사라졌어요. 새로 시작해 주세요.');
+    for (const c of wss.clients) if (c !== ws && c.ctx && c.ctx.token === m.token) { c.ctx = null; try { c.close(); } catch { /* */ } }
     const seat = seatOf(room, m.token);
     if (seat >= 0) {
       const s = room.seats[seat];

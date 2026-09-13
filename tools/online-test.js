@@ -3,6 +3,7 @@
 import puppeteer from 'puppeteer-core';
 import path from 'node:path';
 const OUT = process.argv[2];
+const SERVER = process.env.SERVER || 'http://localhost:3210';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const browser = await puppeteer.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: 'new', args: ['--no-sandbox'] });
 const errors = [];
@@ -17,7 +18,7 @@ const mk = async (name) => {
 let n = 0;
 const shot = async (page, label) => { const f = path.join(OUT, `${String(++n).padStart(2, '0')}-${label}.png`); await page.screenshot({ path: f }); console.log('📸', f); };
 const A = await mk('A'), B = await mk('B');
-await A.goto('http://localhost:3210/game/tictactoe', { waitUntil: 'networkidle0' });
+await A.goto(`${SERVER}/game/tictactoe`, { waitUntil: 'networkidle0' });
 await A.waitForSelector('.mode-btn');
 const modes = await A.$$('.mode-btn'); await modes[1].click(); await sleep(200); // 친구와 온라인
 await A.click('.btn-primary.btn-lg');
@@ -25,7 +26,7 @@ await A.waitForSelector('.room-code .rc-value', { timeout: 8000 });
 const code = await A.$eval('.room-code .rc-value', (e) => e.textContent.trim());
 console.log('방 코드:', code);
 await shot(A, 'A-lobby');
-await B.goto(`http://localhost:3210/join/${code}`, { waitUntil: 'networkidle0' });
+await B.goto(`${SERVER}/join/${code}`, { waitUntil: 'networkidle0' });
 await B.waitForSelector('.seat-list', { timeout: 8000 });
 await sleep(500);
 await shot(B, 'B-lobby');

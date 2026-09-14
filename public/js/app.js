@@ -12,11 +12,22 @@ import { renderSetup } from './ui/setup.js';
 import { renderLobby } from './ui/lobby.js';
 import { renderPlay } from './ui/play.js';
 import { toast } from './ui/toast.js';
+import { net } from './core/net.js';
+import { showWake, hideWake, setWakeStage } from './ui/wake.js';
 
 store.init();
 sound.setEnabled(store.settings.sound);
 haptics.setEnabled(store.settings.haptic);
 install.init();
+
+// 대전 서버가 잠들어 있으면(무료 서버) 깨우는 동안 우리 로딩 화면을 보여 주고, 앱을 열 때 미리 조용히 깨워 둔다
+net.hooks.wake = (phase, info) => {
+  if (phase === 'start') showWake({ cancel: info && info.cancel });
+  else if (phase === 'stage') setWakeStage(info);
+  else if (phase === 'done') hideWake(true);
+  else if (phase === 'fail') hideWake(false);
+};
+net.prewarm();
 
 // 첫 터치에서 오디오 잠금 해제
 const unlock = () => { sound.unlock(); document.removeEventListener('pointerdown', unlock); document.removeEventListener('keydown', unlock); };

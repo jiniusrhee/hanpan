@@ -66,7 +66,8 @@ app.get('/api/room/:code', (req, res) => {
   if (!room) return res.status(404).json({ ok: false, error: '방을 찾을 수 없어요' });
   res.json({ ok: true, room: publicRoom(room, null) });
 });
-app.get('/healthz', (req, res) => res.json({ ok: true, rooms: rooms.rooms.size }));
+// 정적 배포판(GitHub Pages 등)이 서버를 깨울 때 다른 출처에서 호출하므로 CORS를 열어 둔다
+app.get('/healthz', (req, res) => { res.set('Access-Control-Allow-Origin', '*'); res.set('Cache-Control', 'no-store'); res.json({ ok: true, rooms: rooms.rooms.size }); });
 
 app.use(express.static(PUBLIC_DIR, {
   maxAge: '1h',

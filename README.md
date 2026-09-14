@@ -44,7 +44,7 @@ npm start          # http://localhost:3000
 
 1. 위 버튼을 누르거나 [dashboard.render.com](https://dashboard.render.com) → **New → Blueprint**에서 이 저장소를 고르면 `render.yaml` 설정대로 배포돼요.
 2. 몇 분 뒤 `https://hanpan-xxxx.onrender.com` 같은 주소가 생겨요. 이 주소에서는 카카오톡 초대 링크와 온라인 대전이 모두 동작해요.
-3. 무료 플랜은 15분 동안 아무도 안 쓰면 잠들었다가 첫 접속 때 30초쯤 걸려 깨어나요. 방은 서버 메모리에만 있으니 서버가 재시작되면 진행 중이던 방은 사라져요(끝난 뒤 새로 만들면 돼요).
+3. 무료 플랜은 15분 동안 아무도 안 쓰면 잠들었다가 첫 접속 때 30초쯤 걸려 깨어나요. 앱은 서버가 잠든 걸 감지하면 **깨우는 중 화면**(진행 막대·게임 팁)을 보여 주고 깨어나는 대로 이어서 진행해요. 앱을 열 때 미리 조용히 깨워 두기도 해요. 방은 서버 메모리에만 있으니 서버가 재시작되면 진행 중이던 방은 사라져요(끝난 뒤 새로 만들면 돼요).
 
 Railway, Fly.io, 개인 서버(Nginx + Node)도 같은 방식이에요. `PORT` 환경변수만 읽고, `/ws` 경로의 WebSocket 업그레이드를 허용해 주면 돼요.
 
@@ -102,6 +102,7 @@ npm run test:bots                          # 봇 품질 점검 (쉬움/보통 vs
 npm run shots                              # 헤드리스 크롬 스크린샷 (localhost:3210 서버 필요)
 npm run test:online                        # 브라우저 여러 개로 온라인 대전 흐름 점검 (기본 localhost:3210, SERVER=https://... 로 배포 서버 지정)
 node tools/sim-devices.js --out ./sim      # 15종 기기 × 모든 게임 × 인원수 레이아웃 시뮬레이션 (설정당 100턴)
+node tools/sleepy-proxy.js --sleep 12000   # 잠든 서버 흉내 (3211 → 3210). 이어서 PROXY_WS=ws://localhost:3211/ws node tools/wake-test.js ./wake-shots 로 깨우기 화면 점검
 ```
 
 브라우저 테스트는 `puppeteer-core`와 로컬 Chrome을 사용해요. Chrome 경로가 다르면 `CHROME` 환경변수로 지정하세요.

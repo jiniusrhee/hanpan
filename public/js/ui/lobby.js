@@ -40,6 +40,7 @@ export async function renderLobby({ code }) {
       await net.join(code, store.name);
     }
   } catch (e) {
+    if (e.cancelled) { navigate('/', { replace: true }); return; }
     clear(app);
     app.appendChild(h('div', { class: 'screen center' },
       h('div', { style: { fontSize: '52px', marginTop: '40px' }, text: '😵' }),

@@ -443,3 +443,31 @@ svg { display: block; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* 서버 깨우기 화면 */
+.wake { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: 20px; background: var(--bg); opacity: 0; transition: opacity .28s; }
+.wake.in { opacity: 1; }
+.wake::before { content: ''; position: absolute; inset: -30%; background: radial-gradient(circle at 30% 20%, var(--accent-soft), transparent 45%), radial-gradient(circle at 75% 80%, rgba(88, 166, 255, 0.14), transparent 45%); animation: wake-drift 9s ease-in-out infinite alternate; pointer-events: none; }
+@keyframes wake-drift { from { transform: translate(-3%, -2%) rotate(0deg); } to { transform: translate(3%, 2%) rotate(4deg); } }
+.wake-card { position: relative; width: 100%; max-width: 380px; text-align: center; display: grid; gap: 10px; justify-items: center; }
+.wake-logo { font-size: 40px; font-weight: 900; letter-spacing: -1.5px; line-height: 1; }
+.wake-logo em { color: var(--accent); font-style: normal; }
+.wake-pieces { display: flex; gap: 10px; font-size: 30px; line-height: 1; margin: 6px 0 2px; height: 44px; align-items: flex-end; }
+.wake-pieces span { display: inline-block; animation: wake-bounce 1.1s cubic-bezier(.35, 0, .3, 1) infinite; filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.35)); }
+@keyframes wake-bounce { 0%, 100% { transform: translateY(0) scale(1, 1); } 30% { transform: translateY(-16px) scale(0.96, 1.06); } 50% { transform: translateY(0) scale(1.08, 0.92); } 65% { transform: translateY(-5px) scale(1, 1); } }
+.wake-title { margin: 4px 0 0; font-size: 20px; font-weight: 800; }
+.wake-sub { margin: 0; color: var(--text-2); font-size: 14px; line-height: 1.5; min-height: 2.6em; }
+.wake-bar { width: 100%; height: 10px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); overflow: hidden; margin-top: 4px; }
+.wake-bar i { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .4s ease-out; position: relative; }
+.wake-bar i::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent); animation: wake-shine 1.4s linear infinite; }
+@keyframes wake-shine { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+.wake-meta { width: 100%; display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; font-weight: 700; }
+.wake-dots::after { content: '\2026'; display: inline-block; width: 1.2em; text-align: left; animation: wake-dots 1.2s steps(4) infinite; overflow: hidden; vertical-align: bottom; }
+@keyframes wake-dots { from { width: 0; } to { width: 1.2em; } }
+.wake-tip { margin-top: 10px; padding: 12px 14px; border-radius: var(--radius-sm); background: var(--surface); border: 1px solid var(--border); color: var(--text-2); font-size: 13px; line-height: 1.5; min-height: 3.4em; display: flex; align-items: center; transition: opacity .26s, transform .26s; }
+.wake-tip.out { opacity: 0; transform: translateY(4px); }
+.wake-cancel { margin-top: 6px; color: var(--muted); font-size: 13px; }
+.wake.done .wake-pieces span { animation: wake-hop .5s var(--ease-pop) both; }
+@keyframes wake-hop { 0% { transform: translateY(0); } 50% { transform: translateY(-22px) scale(1.15); } 100% { transform: translateY(0); } }
+.wake.done .wake-title { color: var(--good); }
+.wake.done .wake-dots::after { content: ''; animation: none; }

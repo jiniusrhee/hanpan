@@ -74,7 +74,7 @@ export async function renderSetup({ id }) {
   function renderModes() {
     clear(modeList);
     for (const m of modes) {
-      modeList.appendChild(h('button', { class: 'mode-btn' + (mode === m.id ? ' active' : '') + (m.disabled ? ' disabled' : ''), onclick: () => { if (m.disabled) { sound.play('error'); toast('이 주소에서는 온라인 대전을 쓸 수 없어요'); return; } mode = m.id; sound.play('click'); haptics.tap(); renderModes(); renderOptions(); } },
+      modeList.appendChild(h('button', { class: 'mode-btn' + (mode === m.id ? ' active' : '') + (m.disabled ? ' disabled' : ''), onclick: () => { if (m.disabled) { sound.play('error'); toast('이 주소에서는 온라인 대전을 쓸 수 없어요'); return; } mode = m.id; if (mode === 'online') net.prewarm(); sound.play('click'); haptics.tap(); renderModes(); renderOptions(); } },
         h('div', { class: 'm-ico', text: m.ico }), h('div', null, h('div', { class: 'm-title', text: m.title }), h('div', { class: 'm-desc', text: m.desc }))));
     }
   }
@@ -117,7 +117,7 @@ export async function renderSetup({ id }) {
         store.session = { code: res.code, token: res.token, gameName: g.name, name: store.name };
         navigate(`/room/${res.code}`);
       } catch (e) {
-        toast(e.message || '방을 만들지 못했어요', { type: 'error' });
+        if (!e.cancelled) toast(e.message || '방을 만들지 못했어요', { type: 'error' });
         startBtn.disabled = false;
       }
       return;

@@ -45,10 +45,15 @@ export class Net {
     const ctl = new AbortController();
     if (holder) holder.ctl = ctl;
     const timer = setTimeout(() => ctl.abort(), timeoutMs);
+    const url = this.httpBase() + '/healthz?t=' + Date.now();
     try {
-      const res = await fetch(this.httpBase() + '/healthz', { cache: 'no-store', signal: ctl.signal });
+      const res = await fetch(url, { cache: 'no-store', signal: ctl.signal });
       return !!res && res.ok;
-    } catch { return false; } finally { clearTimeout(timer); }
+    } catch (e) {
+      if (ctl.signal.aborted) return false;
+      // CORS 헤더가 없는(예전 버전) 서버여도 응답 자체가 오면 깨어난 것 — 내용을 못 읽는 no-cors 요청으로 한 번 더
+      try { const res = await fetch(url, { cache: 'no-store', mode: 'no-cors', signal: ctl.signal }); return !!res; } catch { return false; }
+    } finally { clearTimeout(timer); }
   }
 
   // 앱을 열 때 조용히 미리 깨워 두기 (사용자가 온라인을 고를 즈음엔 이미 깨어 있도록)

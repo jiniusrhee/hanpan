@@ -101,6 +101,7 @@ npm run test:mass                          # 게임 × 인원수마다 10,000판
 npm run test:bots                          # 봇 품질 점검 (쉬움/보통 vs 무작위, 어려움 vs 쉬움 승률과 응답 시간, 약 15분)
 npm run shots                              # 헤드리스 크롬 스크린샷 (localhost:3210 서버 필요)
 npm run test:online                        # 브라우저 여러 개로 온라인 대전 흐름 점검 (기본 localhost:3210, SERVER=https://... 로 배포 서버 지정)
+npm run test:anim                          # 봇 대전 애니메이션 잘림 검사 (localhost:3210 서버 필요)
 node tools/sim-devices.js --out ./sim      # 15종 기기 × 모든 게임 × 인원수 레이아웃 시뮬레이션 (설정당 100턴)
 node tools/sleepy-proxy.js --sleep 12000   # 잠든 서버 흉내 (3211 → 3210). 이어서 PROXY_WS=ws://localhost:3211/ws node tools/wake-test.js ./wake-shots 로 깨우기 화면 점검
 ```

@@ -24,7 +24,10 @@ export const meta = {
 - 둘 곳이 없거나 끝내고 싶으면 **패스**를 눌러요. 두 사람이 연달아 패스하면 게임이 끝나요.
 
 ## 계가
-- 이 앱은 간단한 **지역 계가(돌 + 집)** 방식을 써요. 죽은 돌은 자동으로 판정하지 않으니, 끝내기 전에 상대의 죽은 돌은 직접 따내 주세요.
+- 이 앱은 **내 돌 + 내가 둘러싼 빈 칸**을 세는 방식이에요(중국식 계가에 가까워요). 따낸 돌은 따로 더하지 않아요.
+- 죽은 돌은 자동으로 판정하지 않으니, 끝내기 전에 상대의 죽은 돌은 직접 따내 주세요.
+- 양쪽이 모두 접한 빈 칸(공배)은 누구 것도 아니에요. 끝내기 전에 메워 두면 깔끔해요.
+- 너무 길어지면(판 크기의 세 배 수) 그 자리에서 계가해 끝내요.
 
 ## 팁
 - 처음에는 귀(모서리) → 변 → 중앙 순서로 두는 게 효율적이에요.
@@ -203,7 +206,7 @@ function playout(board, nb, size, turn, ko, rng, maxMoves) {
   const owner = territory(board, size);
   let b = 0, w = 0;
   for (let i = 0; i < n; i++) { if (board[i] === 0 || owner[i] === 0) b++; else if (board[i] === 1 || owner[i] === 1) w++; }
-  return b;
+  return { b, w };   // 주인 없는 공배가 있으면 b + w < 전체 이므로 둘 다 돌려준다
 }
 
 export function ai(state, level = 2) {
@@ -239,8 +242,8 @@ export function ai(state, level = 2) {
     const cap = playInPlace(board, nb, best.m.i, me);
     if (cap === null) { best.n += 1000; continue; }
     const ko = koAfter(board, nb, best.m.i, cap);
-    const black = playout(board, nb, size, 1 - me, ko, rng, size * size * 2);
-    const blackWins = black > size * size - black + komi; // 흑 점수 > 백 점수
+    const { b: black, w: white } = playout(board, nb, size, 1 - me, ko, rng, size * size * 2);
+    const blackWins = black > white + komi; // 흑 점수 > 백 점수(공배 제외 + 덤)
     const win = (me === 0) === blackWins ? 1 : 0;
     best.n++; best.w += win; root.n++; root.w += win;
     if ((it & 15) === 0 && performance.now() > deadline) break;

@@ -17,7 +17,7 @@ export const meta = {
 - 바로 앞 대각선에 상대 말이 있고 그 너머가 비어 있으면 뛰어넘어 잡아요. 연속으로 잡을 수 있으면 계속 잡아요.
 - **잡을 수 있으면 반드시 잡아야 해요.**
 - 상대 끝줄에 도착하면 왕(킹)이 돼요. 왕은 앞뒤 대각선 모두 움직이고 잡을 수 있어요.
-- 80수 동안 잡거나 승격한 말이 없으면 무승부예요.
+- 80수 동안 잡거나 승격한 말이 없거나, 같은 국면이 세 번 나오면 무승부예요.
 
 ## 팁
 - 뒷줄 말을 남겨두면 상대가 왕이 되기 어려워요.
@@ -94,7 +94,7 @@ export function apply(state, m) {
   board[m.to] = np;
   const irreversible = m.caps.length > 0 || promoted;
   const next = { turn: 1 - state.turn, board, last: m, quiet: irreversible ? 0 : state.quiet + 1, reps: irreversible ? {} : { ...state.reps }, rng: state.rng };
-  const key = board.join('') + next.turn;
+  const key = board.join(',') + '|' + next.turn;   // 킹(10)이 두 자리라 구분자 없이 이으면 다른 국면이 겹친다
   next.reps[key] = (next.reps[key] || 0) + 1;
   const events = [{ type: 'move', path: m.path, caps: m.caps, seat: state.turn, piece: p }];
   if (promoted) events.push({ type: 'promote', at: m.to });
@@ -108,7 +108,7 @@ export function status(state) {
     return { over: true, winner: 1 - state.turn, reason: mine === 0 ? '말을 모두 잡았어요' : '움직일 수 있는 말이 없어요' };
   }
   if (state.quiet >= 80) return { over: true, draw: true, winner: null, reason: '80수 동안 잡힌 말이 없어요' };
-  const key = state.board.join('') + state.turn;
+  const key = state.board.join(',') + '|' + state.turn;
   if ((state.reps[key] || 0) >= 3) return { over: true, draw: true, winner: null, reason: '같은 국면이 세 번 나왔어요' };
   return { over: false };
 }

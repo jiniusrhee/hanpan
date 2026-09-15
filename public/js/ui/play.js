@@ -195,7 +195,7 @@ export async function renderPlay() {
       if (info.extraHtml != null) p.querySelector('.sp-extra').innerHTML = info.extraHtml;
       if (info.sub != null) p.querySelector('.sp-sub').textContent = info.sub;
     },
-    lock: (ms) => { match.locked = true; setTimeout(() => { match.locked = false; }, ms); },
+    lock: (ms) => match.lock(ms),
     relayout: () => applyLayout(), // 뷰가 지연 렌더로 높이를 바꿨을 때 즉시 화면을 다시 맞춘다
     stamp: (text, opts) => fx.stamp(text, opts),
     isOver: () => !!match.over,
@@ -392,13 +392,13 @@ export async function renderPlay() {
       if (lastTurn !== null && state.turn !== lastTurn && !match.over) {
         // 방금 둔 사람의 시점으로 결과 애니메이션을 먼저 보여준 뒤 커튼을 내린다
         viewerOverride = lastTurn;
-        match.locked = true;
+        match.locked = true; match.lockUntil = 0;
         origOnState(state, events, prev, animate);
         const curtain = h('div', { class: 'curtain' }, h('div', null,
           h('div', { style: { fontSize: '48px' }, text: '📱' }),
           h('h2', { text: `${seats[state.turn].name}님 차례` }),
           h('p', { text: '기기를 넘겨주세요. 준비되면 아래 버튼을 눌러요.' }),
-          h('button', { class: 'btn btn-primary btn-lg', text: '준비됐어요', onclick: () => { curtain.remove(); viewerOverride = null; match.locked = false; origOnState(state, [], null, false); } })));
+          h('button', { class: 'btn btn-primary btn-lg', text: '준비됐어요', onclick: () => { curtain.remove(); viewerOverride = null; match.locked = false; match.lockUntil = 0; origOnState(state, [], null, false); } })));
         setTimeout(() => { if (!destroyed) root.appendChild(curtain); }, animate ? 1500 : 0);
       } else origOnState(state, events, prev, animate);
       lastTurn = state.turn;
@@ -481,7 +481,7 @@ export async function renderPlay() {
         if (match.over) return { over: true };
         const ms = match.legalMoves();
         if (!ms.length) return { stuck: true };
-        match.locked = false;
+        match.locked = false; match.lockUntil = 0;
         const m = ms[(Math.random() * ms.length) | 0];
         const ok = match.submit(m);
         return { ok, over: !!match.over, turn: match.state.turn, moves: match.history.length };

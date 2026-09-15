@@ -1,5 +1,5 @@
 import { h, svg } from '../../core/util.js';
-import { NODE_XY, FINISH, NAMES } from './rules.js';
+import { NODE_XY, FINISH, NAMES, destOf } from './rules.js';
 
 const COLORS = ['#4fa3ff', '#ff6b6b', '#3ddc97', '#ffc247'];
 const M = 0.6; // 여백
@@ -84,18 +84,6 @@ export function create(root, ctx) {
       if (dest == null || dest === FINISH || dest < 0) continue; // 완주·출발점 복귀는 표시할 칸이 없다
       hlG.appendChild(svg('circle', { cx: X(dest), cy: Y(dest), r: 0.3, fill: 'none', stroke: COLORS[state.turn], 'stroke-width': 0.07, 'stroke-dasharray': '0.12 0.08' }));
     }
-  }
-
-  function destOf(tok, r) {
-    // rules의 advance와 같은 계산 (표시용)
-    const ROUTES = { O: [...Array.from({ length: 20 }, (_, i) => i), FINISH], A: [5, 20, 21, 22, 23, 24, 15, 16, 17, 18, 19, FINISH], B: [10, 25, 26, 22, 27, 28, FINISH], C: [22, 27, 28, FINISH] };
-    if (tok.pos === FINISH) return null;
-    if (r === -1) { if (!tok.hist.length) return null; return tok.hist[tok.hist.length - 1].pos; }
-    let route = tok.route, idx = tok.idx;
-    if (tok.pos === -1) { route = 'O'; idx = 0; }
-    idx += r;
-    const path = ROUTES[route];
-    return idx >= path.length - 1 ? FINISH : path[idx];
   }
 
   function onTokenTap(seat, tokenId) {

@@ -142,7 +142,7 @@ function bestScoreChoice(scores, dice, rollsLeft) {
     const sc = scoreFor(i, dice);
     let val = sc - EXPECT[i] * 0.85;
     if (i < 6) { const upperSum = scores.slice(0, 6).reduce((a, b) => a + (b || 0), 0); if (sc >= (i + 1) * 3) val += 6; if (upperSum + sc >= BONUS_AT) val += 20; }
-    if (sc === 0) val -= i === 11 ? -8 : 4; // 야찌 칸을 0으로 버리는 건 손해가 적음
+    if (sc === 0) val -= i === 11 ? 12 : 4; // 0을 쓰는 건 손해, 특히 50점짜리 야찌 칸은 최대한 아낀다
     if (val > bestV) { bestV = val; best = i; }
   });
   return { cat: best, v: bestV };

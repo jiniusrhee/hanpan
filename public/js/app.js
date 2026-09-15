@@ -40,6 +40,7 @@ route('/room/:code', renderLobby);
 route('/join/:code', ({ code }) => { navigate(`/room/${code.toUpperCase()}`, { replace: true }); });
 route('/play', async (params, query) => {
   // 테스트/시뮬레이션용 바로 시작: /play?sim=<게임id>&players=<n>&<옵션키>=<값>
+  //   추가: &bots=all 또는 &bots=1,2 로 해당 좌석을 봇으로, &level=1~3 으로 난이도 지정
   const simId = query && query.get('sim');
   if (simId && gameById(simId)) {
     const game = await loadGame(simId);
@@ -53,9 +54,14 @@ route('/play', async (params, query) => {
     let n = +(query.get('players') || 0);
     if (!g.players.includes(n)) n = g.players[0];
     const names = game.meta.seatNames ? game.meta.seatNames(n, options) : [];
+    const botsArg = query.get('bots') || '';
+    const botSeats = botsArg === 'all' ? Array.from({ length: n }, (_, i) => i) : botsArg.split(',').filter((x) => x !== '').map(Number);
+    const level = Math.min(3, Math.max(1, +(query.get('level') || 2)));
     session.pending = {
-      gameId: simId, game, options, mode: 'hotseat', sim: true, seed: +(query.get('seed') || ((Math.random() * 2 ** 31) | 0)),
-      seats: Array.from({ length: n }, (_, i) => ({ type: 'human', name: i === 0 ? store.name : `${names[i] || i + 1} 플레이어`, local: true })),
+      gameId: simId, game, options, mode: botSeats.length ? 'bot' : 'hotseat', sim: true, seed: +(query.get('seed') || ((Math.random() * 2 ** 31) | 0)),
+      seats: Array.from({ length: n }, (_, i) => (botSeats.includes(i)
+        ? { type: 'bot', name: `${names[i] || i + 1} 봇`, level, local: true }
+        : { type: 'human', name: i === 0 ? store.name : `${names[i] || i + 1} 플레이어`, local: true })),
     };
   }
   return renderPlay();

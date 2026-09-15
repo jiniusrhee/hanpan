@@ -160,8 +160,8 @@ export function create(root, ctx) {
           ctx.sound.play('place'); ctx.haptics.tap();
           const [r, c] = ev.cells[0]; const p = board.centerOf(r, c);
           ctx.fx.burst(p.x, p.y, { count: 8 + ev.cells.length * 2, palette: ev.seat === 0 ? 'blue' : ev.seat === 1 ? 'red' : ev.seat === 2 ? 'green' : 'gold', speed: 0.8, size: 3 });
-        } else if (ev.type === 'allPlaced') { ctx.fx.stamp('올 클리어! +15', { glow: 'rgba(255,194,71,.9)' }); ctx.sound.play('bonus'); }
-        else if (ev.type === 'skip') { ctx.fx.stamp(`${ctx.seats[ev.from].name} 패스`, { small: true, glow: 'rgba(88,166,255,.9)' }); }
+        } else if (ev.type === 'allPlaced') { ctx.fx.stamp(`올 클리어! +${ev.bonus || 15}`, { glow: 'rgba(255,194,71,.9)' }); ctx.sound.play('bonus'); }
+        else if (ev.type === 'skip') { const who = (ev.seats || [ev.from]).map((i) => ctx.seats[i].name).join(', '); ctx.fx.stamp(`${who} 패스`, { small: true, glow: 'rgba(88,166,255,.9)' }); }
       }
       const sc = scores(state);
       for (let i = 0; i < state.n; i++) ctx.setSeatInfo(i, { score: sc[i], sub: `${ctx.seatNames[i]} · 남은 조각 ${state.hands[i].length}` });

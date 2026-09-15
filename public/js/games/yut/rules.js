@@ -19,7 +19,7 @@ export const meta = {
 - 윷가락 4개를 던져요. 등(둥근 면)이 아닌 배(평평한 면)가 위로 온 개수로 결과가 정해져요.
 - **도** 1칸, **개** 2칸, **걸** 3칸, **윷** 4칸, **모** 5칸.
 - 윷이나 모가 나오면 **한 번 더** 던져요.
-- 배가 하나만 나왔는데 그게 표시된 윷가락이면 **빽도**! 뒤로 한 칸 가요.
+- 배가 하나만 나왔는데 그게 표시된 윷가락이면 **빽도**! 지나온 길을 **정확히 한 칸** 되돌아가요. (움직일 말이 없으면 그냥 넘어가요.)
 
 ## 말 움직이기
 - 던진 결과마다 어떤 말을 움직일지 골라요. 새 말을 꺼낼 수도 있어요.
@@ -41,7 +41,7 @@ for (let k = 0; k < 5; k++) NODE_XY.push([0, 1.2 * k]);          // 10..14 왼�
 for (let k = 0; k < 5; k++) NODE_XY.push([1.2 * k, 6]);          // 15..19 아래쪽 변 (왼쪽→오른쪽)
 NODE_XY.push([5, 1], [4, 2], [3, 3], [2, 4], [1, 5], [1, 1], [2, 2], [4, 4], [5, 5]);
 export const FINISH = 99;
-const ROUTES = {
+export const ROUTES = {
   O: [...Array.from({ length: 20 }, (_, i) => i), FINISH],
   A: [5, 20, 21, 22, 23, 24, 15, 16, 17, 18, 19, FINISH],
   B: [10, 25, 26, 22, 27, 28, FINISH],
@@ -54,36 +54,47 @@ export function init(options, seed, playerCount = 2) {
   const per = options.pieces || 4;
   return {
     turn: 0, n, per,
-    tokens: Array.from({ length: n }, () => Array.from({ length: per }, () => ({ pos: -1, route: 'O', idx: 0, hist: [] }))),
+    tokens: Array.from({ length: n }, () => Array.from({ length: per }, () => ({ pos: -1, route: 'O', idx: 0 }))),
     throws: 1, pending: [], lastThrow: null, last: null, rng: seed | 0, winner: -1,
   };
+}
+
+// 지름길 시작점에서 빽도로 한 칸 뒤로 갔을 때 되돌아가는 자리 (들어온 길로 되돌아간다)
+const BACK_FROM_START = { A: { route: 'O', idx: 4 }, B: { route: 'O', idx: 9 }, C: { route: 'A', idx: 2 } };
+
+// 모서리·가운데에 멈추면 지름길을 탄다 (앞으로 갔든 빽도로 물러났든 똑같이 적용)
+function rest(pos, route, idx) {
+  if (pos === 5 && route === 'O') return { pos, route: 'A', idx: 0 };
+  if (pos === 10 && route === 'O') return { pos, route: 'B', idx: 0 };
+  if (pos === 22 && route === 'A') return { pos, route: 'C', idx: 0 };
+  return { pos, route, idx };
 }
 
 // 토큰이 결과 r만큼 움직였을 때의 새 상태 (없으면 null)
 function advance(tok, r) {
   if (tok.pos === FINISH) return null;
   if (r === -1) {
-    if (tok.pos === -1 || tok.hist.length === 0) return null;
-    const h = tok.hist[tok.hist.length - 1];
-    return { pos: h.pos, route: h.route, idx: h.idx, hist: tok.hist.slice(0, -1) };
+    // 빽도: 지나온 길을 따라 정확히 한 칸만 뒤로 간다
+    if (tok.pos === -1) return null;                 // 대기 중인 말은 빽도로 꺼낼 수 없다
+    if (tok.idx > 0) { const idx = tok.idx - 1; return rest(ROUTES[tok.route][idx], tok.route, idx); }
+    const b = BACK_FROM_START[tok.route];
+    if (!b) return null;                             // 출발점(바깥 둘레 0번)보다 뒤로는 갈 수 없다
+    return rest(ROUTES[b.route][b.idx], b.route, b.idx);
   }
-  let route = tok.route, idx = tok.idx, pos = tok.pos;
-  if (pos === -1) { route = 'O'; idx = 0; pos = 0; }
+  let route = tok.route, idx = tok.idx;
+  if (tok.pos === -1) { route = 'O'; idx = 0; }
   const path = ROUTES[route];
   idx += r;
-  if (idx >= path.length - 1) return { pos: FINISH, route, idx: path.length - 1, hist: [...tok.hist, { pos: tok.pos, route: tok.route, idx: tok.idx }] };
-  pos = path[idx];
-  const hist = [...tok.hist, { pos: tok.pos, route: tok.route, idx: tok.idx }];
-  // 지름길 진입
-  if (pos === 5 && route === 'O') { route = 'A'; idx = 0; }
-  else if (pos === 10 && route === 'O') { route = 'B'; idx = 0; }
-  else if (pos === 22 && route === 'A') { route = 'C'; idx = 0; }
-  return { pos, route, idx, hist };
+  if (idx >= path.length - 1) return { pos: FINISH, route, idx: path.length - 1 };
+  return rest(path[idx], route, idx);
 }
+
+// 표시용: r만큼 움직였을 때 도착하는 칸 (뷰가 같은 계산을 중복하지 않도록 내보낸다)
+export function destOf(tok, r) { const nt = advance(tok, r); return nt ? nt.pos : null; }
 
 // 이동 중 지나가는 노드 목록 (애니메이션용)
 function pathOf(tok, r) {
-  if (r === -1) { const h = tok.hist[tok.hist.length - 1]; return h ? [h.pos] : []; }
+  if (r === -1) { const nt = advance(tok, -1); return nt ? [nt.pos] : []; }
   let route = tok.route, idx = tok.idx;
   const out = [];
   if (tok.pos === -1) { route = 'O'; idx = 0; }
@@ -100,9 +111,9 @@ function tokenMoves(state, seat) {
       if (tok.pos === FINISH) return;
       const nt = advance(tok, r);
       if (!nt) return;
-      // 같은 칸에 있는 같은 노선의 말은 한 묶음: 첫 번째 말만 대표로
-      const key = `${pi}:${tok.pos}:${tok.route}`;
-      if (tok.pos !== -1 && seen.has(key)) return;
+      // 같은 칸의 말은(노선이 달라도 남은 칸수가 같다) 한 묶음, 대기 중인 말도 서로 구별할 필요가 없다
+      const key = `${pi}:${tok.pos}`;
+      if (seen.has(key)) return;
       seen.add(key);
       out.push({ token: ti, result: pi });
     });
@@ -133,7 +144,7 @@ function throwSticks(state) {
 
 export function apply(state, m) {
   const seat = state.turn;
-  const clone = (s) => ({ ...s, tokens: s.tokens.map((arr) => arr.map((t) => ({ ...t, hist: t.hist }))), pending: s.pending.slice() });
+  const clone = (s) => ({ ...s, tokens: s.tokens.map((arr) => arr.map((t) => ({ ...t }))), pending: s.pending.slice() });
   if (m.throw) {
     const s = clone(state);
     const { r, sticks } = throwSticks(s);
@@ -158,16 +169,17 @@ export function apply(state, m) {
   const r = s.pending[m.result];
   s.pending.splice(m.result, 1);
   const lead = s.tokens[seat][m.token];
-  const group = lead.pos === -1 ? [m.token] : s.tokens[seat].map((t, i) => (t.pos === lead.pos && t.route === lead.route && t.pos !== FINISH ? i : -1)).filter((i) => i >= 0);
+  // 같은 칸에 있으면 업은 것: 노선 이름이 달라도 실제로 같은 자리이고 남은 칸수도 같으므로 함께 움직인다
+  const group = lead.pos === -1 ? [m.token] : s.tokens[seat].map((t, i) => (t.pos === lead.pos && t.pos !== FINISH ? i : -1)).filter((i) => i >= 0);
   const nt = advance(lead, r);
   const events = [{ type: 'move', seat, tokens: group, from: lead.pos, to: nt.pos, r, path: pathOf(lead, r) }];
-  for (const i of group) s.tokens[seat][i] = { ...nt, hist: nt.hist };
+  for (const i of group) s.tokens[seat][i] = { ...nt };
   if (nt.pos !== FINISH && nt.pos !== -1) {
     // 잡기
     let captured = 0;
-    s.tokens.forEach((arr, os) => { if (os === seat) return; arr.forEach((t, i) => { if (t.pos === nt.pos) { s.tokens[os][i] = { pos: -1, route: 'O', idx: 0, hist: [] }; captured++; } }); });
+    s.tokens.forEach((arr, os) => { if (os === seat) return; arr.forEach((t, i) => { if (t.pos === nt.pos) { s.tokens[os][i] = { pos: -1, route: 'O', idx: 0 }; captured++; } }); });
     if (captured) { s.throws += 1; events.push({ type: 'capture', seat, at: nt.pos, count: captured }); }
-    const stacked = group.length + s.tokens[seat].filter((t, i) => !group.includes(i) && t.pos === nt.pos && t.route === nt.route).length;
+    const stacked = group.length + s.tokens[seat].filter((t, i) => !group.includes(i) && t.pos === nt.pos).length;
     if (stacked > group.length) events.push({ type: 'stack', seat, at: nt.pos, count: stacked });
     if (nt.pos === 5 || nt.pos === 10 || nt.pos === 22) events.push({ type: 'shortcut', seat, at: nt.pos });
   } else if (nt.pos === FINISH) events.push({ type: 'finish', seat, count: group.length });
@@ -221,7 +233,7 @@ export function ai(state, level = 2) {
     const r = state.pending[m.result];
     const nt = advance(tok, r);
     let v = 0;
-    const group = tok.pos === -1 ? 1 : state.tokens[seat].filter((t) => t.pos === tok.pos && t.route === tok.route).length;
+    const group = tok.pos === -1 ? 1 : state.tokens[seat].filter((t) => t.pos === tok.pos).length;
     if (nt.pos === FINISH) v += 40 * group;
     else {
       const capt = state.tokens.reduce((acc, arr, os) => acc + (os === seat ? 0 : arr.filter((t) => t.pos === nt.pos).length), 0);

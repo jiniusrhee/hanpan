@@ -29,8 +29,12 @@ export function create(root, ctx) {
     const state = ctx.match.state;
     const moves = ctx.legalMoves();
     if (selected != null) {
-      const mv = moves.find((m) => m.from === selected && m.to === sq);
-      if (mv) { select(null); ctx.submit(mv); return; }
+      // 시작·도착 칸이 같아도 잡는 경로가 여러 개일 수 있다 — 가장 많이 잡는 경로를 고른다
+      const cand = moves.filter((m) => m.from === selected && m.to === sq);
+      if (cand.length) {
+        const mv = cand.reduce((a, b) => (b.caps.length > a.caps.length ? b : a));
+        select(null); ctx.submit(mv); return;
+      }
     }
     const p = state.board[sq];
     if (p && colorOf(p) === state.turn) {

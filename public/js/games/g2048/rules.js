@@ -31,6 +31,7 @@ export function init(options, seed) {
   const size = options.size || 4;
   const s = { turn: 0, size, board: Array(size * size).fill(0), score: 0, moves: 0, won: false, rng: seed | 0, max: 0 };
   spawn(s); spawn(s);
+  s.max = Math.max(...s.board);
   return s;
 }
 

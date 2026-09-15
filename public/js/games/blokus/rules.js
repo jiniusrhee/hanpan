@@ -153,14 +153,16 @@ export function apply(state, m) {
   const lastPiece = state.lastPiece.slice(); lastPiece[seat] = m.piece;
   const next = { ...state, board, hands, placed, lastPiece, last: { seat, cells } };
   const events = [{ type: 'place', seat, cells, piece: m.piece }];
-  if (hands[seat].length === 0) events.push({ type: 'allPlaced', seat });
+  if (hands[seat].length === 0) events.push({ type: 'allPlaced', seat, bonus: m.piece === 0 ? 20 : 15 });
   // 다음에 놓을 수 있는 사람을 찾는다
   let t = seat, found = false;
+  const skipped = [];
   for (let k = 1; k <= state.n; k++) {
     t = (seat + k) % state.n;
     if (canMove(next, t)) { found = true; break; }
+    skipped.push(t);
   }
-  if (found) { if (t !== (seat + 1) % state.n) events.push({ type: 'skip', from: (seat + 1) % state.n, to: t }); next.turn = t; }
+  if (found) { if (skipped.length) events.push({ type: 'skip', from: skipped[0], to: t, seats: skipped }); next.turn = t; }
   else { next.over = true; events.push({ type: 'end' }); }
   return { state: next, events };
 }

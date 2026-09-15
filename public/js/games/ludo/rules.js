@@ -21,13 +21,14 @@ export const meta = {
 ## 진행
 - 차례가 되면 주사위를 굴려요. **6**이 나와야 말을 출발시킬 수 있어요.
 - 주사위 눈만큼 말 하나를 골라 움직여요. 6이 나오면 한 번 더 굴려요(연속 세 번 6이면 차례가 넘어가요).
-- 상대 말이 혼자 있는 칸에 도착하면 잡아서 출발점으로 돌려보내고, 한 번 더 굴려요.
+- 상대 말이 혼자 있는 칸에 도착하면 잡아서 처음으로 돌려보내고, 한 번 더 굴려요.
+- 내 말 **두 개가 같은 칸**에 있으면 길막이에요. 상대는 그 칸을 지나가지도, 밟지도 못해요.
 - 별(★)이 있는 칸과 각 색의 출발 칸은 안전 지대라 잡히지 않아요.
-- 집에는 **정확한 눈**으로만 들어갈 수 있어요.
+- 집에는 **정확한 눈**으로만 들어갈 수 있어요. 말이 집에 들어가면 한 번 더 굴려요.
 
 ## 팁
 - 말을 하나만 앞세우지 말고 여러 개를 골고루 움직이면 잡힐 위험이 줄어요.
-- 상대 말 바로 앞 1~6칸은 위험해요.`,
+- 상대 말 바로 앞 1~6칸은 위험해요. 말 두 개를 겹쳐 두면 안전하면서 길도 막아요.`,
 };
 
 const SAFE = new Set([0, 8, 13, 21, 26, 34, 39, 47]);
@@ -39,12 +40,30 @@ export function init(options, seed, playerCount = 2) {
 
 export const absOf = (state, seat, p) => (state.corners[seat] * 13 + p) % 52;
 
+// 같은 색 말 2개 이상이 서 있는 칸은 길막: 다른 색 말은 지나가지도, 멈추지도 못한다
+function wallsFor(state, seat) {
+  const cnt = new Map();
+  state.tokens.forEach((arr, os) => {
+    if (os === seat) return;
+    for (const p of arr) { if (p < 0 || p > 50) continue; const a = absOf(state, os, p); cnt.set(a, (cnt.get(a) || 0) + 1); }
+  });
+  const out = new Set();
+  for (const [a, v] of cnt) if (v >= 2) out.add(a);
+  return out;
+}
+
 function movable(state, seat, d) {
   const out = [];
+  const walls = wallsFor(state, seat);
   state.tokens[seat].forEach((p, i) => {
     if (p === 56) return;
-    if (p === -1) { if (d === 6) out.push(i); return; }
-    if (p + d <= 56) out.push(i);
+    if (p === -1 && d !== 6) return;
+    const to = p === -1 ? 0 : p + d;
+    if (to > 56) return;                       // 집에는 정확한 눈으로만
+    if (walls.size) {                          // 바깥 둘레(0~50)만 검사, 내 집 길은 나만 쓴다
+      for (let q = p === -1 ? 0 : p + 1; q <= Math.min(to, 50); q++) if (walls.has(absOf(state, seat, q))) return;
+    }
+    out.push(i);
   });
   return out;
 }
@@ -69,7 +88,11 @@ export function apply(state, m) {
     s.sixes = d === 6 ? s.sixes + 1 : 0;
     const events = [{ type: 'roll', seat, dice: d }];
     if (s.sixes >= 3) { events.push({ type: 'threeSixes', seat }); return { state: nextTurn(s, events), events }; }
-    if (!movable(s, seat, d).length) { events.push({ type: 'noMove', seat }); return { state: nextTurn(s, events), events }; }
+    if (!movable(s, seat, d).length) {
+      events.push({ type: 'noMove', seat });
+      if (d === 6) { s.dice = null; return { state: s, events }; }   // 6은 움직일 말이 없어도 한 번 더 굴릴 권리가 있다
+      return { state: nextTurn(s, events), events };
+    }
     return { state: s, events };
   }
   if (m.pass) { const s = clone(); const events = [{ type: 'noMove', seat }]; return { state: nextTurn(s, events), events }; }
@@ -83,8 +106,14 @@ export function apply(state, m) {
   if (to <= 50) {
     const abs = absOf(s, seat, to);
     if (!SAFE.has(abs)) {
+      // 2개 이상 쌓인 칸은 길막이라 애초에 도착할 수 없으므로, 잡히는 말은 언제나 하나뿐이다
       let captured = 0;
-      s.tokens.forEach((arr, os) => { if (os === seat) return; arr.forEach((p, i) => { if (p >= 0 && p <= 50 && absOf(s, os, p) === abs) { s.tokens[os][i] = -1; captured++; } }); });
+      for (let os = 0; os < s.tokens.length && !captured; os++) {
+        if (os === seat) continue;
+        for (let i = 0; i < s.tokens[os].length; i++) {
+          if (s.tokens[os][i] >= 0 && s.tokens[os][i] <= 50 && absOf(s, os, s.tokens[os][i]) === abs) { s.tokens[os][i] = -1; captured = 1; break; }
+        }
+      }
       if (captured) { again = true; events.push({ type: 'capture', seat, abs, count: captured }); }
     }
   } else if (to === 56) {

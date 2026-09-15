@@ -32,7 +32,8 @@ export const invariants = {
     }
     return null;
   },
-  othello(state, prev) {
+  othello(state, prev, move, events, mod) {
+    if (prev && move && move.pass && mod.legalMoves(prev).some((m) => m.i != null)) return '둘 곳이 있는데 패스했다';
     const filled = count(state.board, (v) => v >= 0);
     if (prev && !(state.passes > prev.passes) && filled !== count(prev.board, (v) => v >= 0) + 1) return '돌 개수가 한 수에 1 늘지 않음';
     return null;
@@ -138,6 +139,36 @@ export const invariants = {
   },
   yut(state, prev, move, events, mod) {
     const F = mod.FINISH;
+    const rem = (t) => (t.pos === F ? 0 : t.pos === -1 ? 20 : mod.ROUTES[t.route].length - 1 - t.idx);
+    if (prev && move && move.token != null) {
+      const seat = prev.turn, r = prev.pending[move.result];
+      const bt = prev.tokens[seat][move.token], at = state.tokens[seat][move.token];
+      if (r === -1) {
+        // 빽도는 지나온 길로 정확히 한 칸 뒤 (지름길 시작점이면 들어온 길의 바로 앞 칸)
+        const want = bt.idx > 0 ? mod.ROUTES[bt.route][bt.idx - 1] : { A: 4, B: 9, C: 21 }[bt.route];
+        if (want == null) return '출발점에서 더 뒤로 가는 빽도가 허용됨';
+        if (at.pos !== want) return `빽도가 한 칸이 아님 (${bt.pos} → ${at.pos}, 기대 ${want})`;
+      } else {
+        const bonus = at.pos === 5 && at.route === 'A' && at.idx === 0 ? 4
+          : at.pos === 10 && at.route === 'B' && at.idx === 0 ? 4
+            : at.pos === 22 && at.route === 'C' && at.idx === 0 ? 5 : 0;
+        const want = Math.max(0, rem(bt) - r - bonus);
+        if (rem(at) !== want) return `이동 거리 불일치 (${r}칸인데 남은 ${rem(bt)}→${rem(at)}, 기대 ${want})`;
+      }
+      // 같은 칸에 있던 내 말은 모두 함께, 다른 칸 말은 그대로
+      for (let i = 0; i < prev.tokens[seat].length; i++) {
+        if (i === move.token) continue;
+        const b2 = prev.tokens[seat][i], a2 = state.tokens[seat][i];
+        const same = b2.pos === bt.pos && b2.pos !== -1 && b2.pos !== F;
+        if (same && !(a2.pos === at.pos && a2.route === at.route && a2.idx === at.idx)) return `업힌 말이 같이 움직이지 않음 (말 ${i})`;
+        if (!same && !(a2.pos === b2.pos && a2.route === b2.route && a2.idx === b2.idx)) return `관계없는 말이 움직임 (말 ${i})`;
+      }
+    }
+    // 같은 칸의 내 말은 남은 칸수가 같아야 한다 (노선 이름이 달라도)
+    for (const arr of state.tokens) {
+      const byPos = new Map();
+      for (const t of arr) { if (t.pos === -1 || t.pos === F) continue; const o = byPos.get(t.pos); if (o != null && o !== rem(t)) return `같은 칸인데 남은 칸수가 다름 (${t.pos})`; byPos.set(t.pos, rem(t)); }
+    }
     const occ = new Map();
     for (let seat = 0; seat < state.tokens.length; seat++) for (const t of state.tokens[seat]) {
       if (t.pos >= 0 && t.pos !== F) { const o = occ.get(t.pos); if (o != null && o !== seat) return `두 사람 말이 같은 칸 ${t.pos}`; occ.set(t.pos, seat); }
@@ -148,6 +179,21 @@ export const invariants = {
     return null;
   },
   ludo(state, prev, move, events, mod) {
+    for (const e of events || []) if (e.type === 'capture' && e.count > 1) return `한 수에 ${e.count}개를 잡음`;
+    if (prev && move && move.token != null) {
+      const seat = prev.turn, d = prev.dice;
+      const from = prev.tokens[seat][move.token];
+      const to = from === -1 ? 0 : from + d;
+      if (to > 56) return `집을 지나쳐 이동 (${to})`;
+      if (state.tokens[seat][move.token] !== to) return `이동 결과 불일치 (${to} 기대)`;
+      if (to <= 50) {
+        // 같은 색 2개 이상이 선 칸은 지나가지도 멈추지도 못한다
+        const cnt = new Map();
+        prev.tokens.forEach((arr, os) => { if (os === seat) return; for (const p of arr) { if (p < 0 || p > 50) continue; const k = `${os}:${mod.absOf(prev, os, p)}`; cnt.set(k, (cnt.get(k) || 0) + 1); } });
+        const wall = new Set(); for (const [k, v] of cnt) if (v >= 2) wall.add(+k.split(':')[1]);
+        if (wall.size) for (let q = from === -1 ? 0 : from + 1; q <= to; q++) if (wall.has(mod.absOf(prev, seat, q))) return `길막을 통과함 (${q}번째 칸)`;
+      }
+    }
     const occ = new Map();
     for (let seat = 0; seat < state.n; seat++) {
       if (state.tokens[seat].length !== 4) return '말 4개 아님';
@@ -160,6 +206,10 @@ export const invariants = {
     return null;
   },
   blokus(state, prev, move, events, mod) {
+    for (const e of events || []) if (e.type === 'allPlaced') {
+      const want = state.lastPiece[e.seat] === 0 ? 20 : 15;
+      if (e.bonus !== want) return `올 클리어 보너스 ${e.bonus} (기대 ${want})`;
+    }
     for (let s = 0; s < state.n; s++) {
       const cells = count(state.board, (v) => v === s);
       if (cells !== state.placed[s]) return `placed 불일치 (좌석 ${s})`;

@@ -5,7 +5,7 @@ import { alphabeta } from '../../core/ai.js';
 export const meta = {
   id: 'gomoku',
   name: '오목',
-  description: '15줄 바둑판에 번갈아 돌을 놓아 가로·세로·대각선으로 5개를 먼저 이으면 이겨요. 삼삼 같은 금수 없이 편하게 즐기는 자유 오목이에요.',
+  description: '바둑판(15·19줄)에 번갈아 돌을 놓아 가로·세로·대각선으로 5개를 먼저 이으면 이겨요. 삼삼 같은 금수 없이 편하게 즐기는 자유 오목이에요.',
   seatNames: () => ['흑', '백'],
   options: [
     { key: 'size', label: '판 크기', values: [{ value: 15, label: '15줄' }, { value: 19, label: '19줄' }], default: 15 },

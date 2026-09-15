@@ -57,8 +57,8 @@ export function create(root, ctx) {
     // 벽: 표시 좌표 기준으로 앵커 보정 (뒤집힌 판이면 앵커가 반대쪽)
     let wr = r, wc = c;
     if (flip) { wr = r - 1; wc = c - 1; }
-    if (mode === 'h') { wr = Math.min(7, Math.max(0, wr)); wc = Math.min(7, Math.max(0, wc)); }
-    else { wr = Math.min(7, Math.max(0, wr)); wc = Math.min(7, Math.max(0, wc)); }
+    // 앵커는 8x8뿐이라 가장자리를 눌렀으면 가장 가까운 앵커로 맞춘다
+    wr = Math.min(7, Math.max(0, wr)); wc = Math.min(7, Math.max(0, wc));
     const legal = ctx.rules.isLegal(state, { type: 'wall', o: mode, r: wr, c: wc });
     if (preview && preview.r === wr && preview.c === wc && preview.o === mode) { if (legal) submitWall(); return; }
     preview = { o: mode, r: wr, c: wc, legal };

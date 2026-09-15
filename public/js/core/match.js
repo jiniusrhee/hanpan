@@ -2,6 +2,9 @@
 import { moveKey } from './util.js';
 import { runBot } from './bot.js';
 
+// 애니메이션이 끝난 뒤 봇이 다음 수를 두기까지의 숨 고르기 시간
+const BOT_GAP_MS = 220;
+
 export class Match {
   /**
    * @param cfg {
@@ -21,7 +24,18 @@ export class Match {
     this.stopped = false;
     this.botSeq = 0;
     this.botTimer = null;
-    this.locked = false;   // 애니메이션 중 입력 잠금
+    this.locked = false;   // 애니메이션·커튼 중 입력 잠금
+    this.lockUntil = 0;    // 애니메이션이 끝나는 시각 (봇도 이때까지 기다린다)
+    this.lockTimer = null;
+  }
+
+  // 뷰가 애니메이션 동안 입력을 잠근다. 봇도 이 시간이 지난 뒤에 다음 수를 두므로 연출이 서로 잘리지 않는다.
+  lock(ms) {
+    const until = performance.now() + ms;
+    if (until > this.lockUntil) this.lockUntil = until;
+    this.locked = true;
+    clearTimeout(this.lockTimer);
+    this.lockTimer = setTimeout(() => { this.locked = false; }, Math.max(0, this.lockUntil - performance.now()));
   }
 
   start(seed = this.seed) {
@@ -122,7 +136,24 @@ export class Match {
     if (this.over || this.stopped) return;
     const seat = this.state.turn;
     if (this.isLocalBot(seat)) this.scheduleBot();
+    else this.autoPassIfForced();
     this.hooks.onTurn && this.hooks.onTurn(seat);
+  }
+
+  // 둘 수 있는 수가 강제 패스 하나뿐이면(오셀로처럼) 사람이 누를 것이 없으므로 알아서 넘긴다.
+  // 이게 없으면 그 좌석에서 판이 영구히 멈춘다.
+  autoPassIfForced() {
+    const meta = this.rules.meta || {};
+    if (!meta.autoPass || !this.isLocalHuman(this.state.turn)) return false;
+    const ms = this.legalMoves();
+    if (ms.length !== 1 || !ms[0].pass) return false;
+    const state = this.state, seat = this.state.turn, move = ms[0];
+    clearTimeout(this.passTimer);
+    this.passTimer = setTimeout(() => {
+      if (this.stopped || this.over || this.state !== state) return;
+      this.commit(move, seat, 'auto');
+    }, Math.max(700, this.lockUntil - performance.now() + BOT_GAP_MS));
+    return true;
   }
 
   scheduleBot() {
@@ -134,10 +165,9 @@ export class Match {
     this.hooks.onBotThinking && this.hooks.onBotThinking(seat, true);
     const minDelay = this.mode === 'online' ? 700 : 420 + Math.random() * 380;
     runBot(this.gameId, state, level, { seat }).then((move) => {
-      const wait = Math.max(0, minDelay - (performance.now() - started));
-      this.botTimer = setTimeout(() => {
-        if (token !== this.botSeq || this.stopped || this.over) return;
-        if (this.state !== state) return;
+      // 생각이 끝났어도 (1) 최소 대기 시간과 (2) 진행 중인 애니메이션이 모두 끝날 때까지 기다린다.
+      // 기다리지 않으면 윷 던지기·말 이동·돌 뒤집기 연출이 다음 수에 잘려서 말이 사라진 것처럼 보인다.
+      const fire = () => {
         this.hooks.onBotThinking && this.hooks.onBotThinking(seat, false);
         if (move == null) {
           // 둘 수 없으면 (규칙상 패스가 없는 경우) 그냥 넘김 처리
@@ -152,7 +182,17 @@ export class Match {
           return;
         }
         this.commit(move, seat, 'bot');
-      }, wait);
+      };
+      const tryFire = () => {
+        if (token !== this.botSeq || this.stopped || this.over) return;
+        if (this.state !== state) return;
+        // 애니메이션이 끝날 때까지, 그리고 끝난 뒤 한숨 돌릴 만큼 더 기다린다
+        const left = this.lockUntil - performance.now();
+        if (left > 0) { this.botTimer = setTimeout(tryFire, left + BOT_GAP_MS); return; }
+        if (this.locked) { this.botTimer = setTimeout(tryFire, 150); return; }  // 핫시트 커튼처럼 기한 없는 잠금
+        fire();
+      };
+      this.botTimer = setTimeout(tryFire, Math.max(0, minDelay - (performance.now() - started)));
     }).catch((e) => {
       if (this.stopped) return;
       console.error(e);
@@ -168,6 +208,7 @@ export class Match {
     if (this.history.length === 0) return 0;
     this.botSeq++;
     clearTimeout(this.botTimer);
+    clearTimeout(this.passTimer);
     let done = 0;
     while (done < n && this.history.length) {
       const h = this.history.pop();
@@ -195,6 +236,7 @@ export class Match {
     if (this.over) return;
     this.botSeq++;
     clearTimeout(this.botTimer);
+    clearTimeout(this.passTimer);
     this.over = status;
     this.hooks.onOver && this.hooks.onOver(status);
   }

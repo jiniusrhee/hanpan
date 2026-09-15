@@ -29,12 +29,12 @@ export const meta = {
 
 ## 특수 규칙
 - **장군**: 상대 궁을 공격하면 장군! 상대는 반드시 피해야 해요.
-- **빅장**: 두 궁이 같은 줄에서 마주 보면 빅장. 차례인 쪽이 피하지 않고 한 수 쉬면 무승부예요.
+- **빅장**: 두 궁이 같은 줄에서 마주 보면 빅장. 차례인 쪽은 반드시 피하거나 막아야 하고, 풀 수 없으면 빅장이 성립해요.
 - **한 수 쉬기**: 장군이 아닐 때는 차례를 넘길 수 있어요.
-- 같은 국면이 세 번 나오거나, 서로 연속으로 쉬면 무승부예요.
+- **점수로 판정**: 빅장이 성립하거나, 같은 국면이 세 번 나오거나, 서로 연속으로 쉬거나, 200수 동안 잡힌 말이 없으면 남은 기물 점수로 승부를 가려요. 점수까지 같으면 무승부예요.
 
 ## 점수
-차 13, 포 7, 마 5, 상 3, 사 3, 졸 2점이에요. 참고용으로 표시돼요.`,
+차 13, 포 7, 마 5, 상 3, 사 3, 졸 2점이고 궁은 0점이에요. 초가 먼저 두는 대신 **한이 1.5점 덤**을 받아요(초 72 : 한 73.5로 시작). 위 판정에 쓰이는 점수예요.`,
 };
 
 const ROWS = 10, COLS = 9;
@@ -183,12 +183,16 @@ export function legalMoves(state) {
   if (state.facingDraw) return [];
   const out = [];
   const facing = state.facing;
+  let anyLegal = false;                          // 장군만 피한 수가 하나라도 있는가
   for (const m of pseudoMoves(state, state.turn)) {
     const { next } = makeMove(state, m);
     if (inCheck(next, state.turn)) continue;
+    anyLegal = true;
     if (facing && isFacing(next.board)) continue; // 빅장은 반드시 피해야 함
     out.push(m);
   }
+  // 장군은 피할 수 있는데 빅장을 풀 방법이 없으면 외통이 아니라 빅장이다 — 받아들이는 수만 남긴다
+  if (facing && out.length === 0 && anyLegal) return [{ pass: true }];
   if (!state.check) out.push({ pass: true });
   return out;
 }
@@ -205,10 +209,11 @@ export function apply(state, m) {
     return { state: next, events: [{ type: 'setup', seat: state.turn, key: m.setup }] };
   }
   if (m.pass) {
-    const next = { ...state, turn: 1 - state.turn, passes: state.passes + 1, last: null, check: false };
+    const next = { ...state, turn: 1 - state.turn, passes: state.passes + 1, last: null, check: false, reps: { ...state.reps } };
     if (state.facing) next.facingDraw = true;
     next.facing = isFacing(next.board);
     next.check = inCheck(next);
+    next.reps[posKey(next)] = (next.reps[posKey(next)] || 0) + 1;
     return { state: next, events: [{ type: 'pass', seat: state.turn }] };
   }
   const { next, captured } = makeMove(state, m);
@@ -223,16 +228,25 @@ export function apply(state, m) {
   return { state: next, events };
 }
 
+// 승부가 나지 않고 끝나면 남은 기물 점수로 가린다 (정식 점수제, 한은 1.5점 덤)
+function byPoints(state, why) {
+  const a = score(state.board, 0), b = score(state.board, 1);
+  const winner = a > b ? 0 : b > a ? 1 : null;
+  const tally = `초 ${a} : 한 ${b}`;
+  if (winner == null) return { over: true, draw: true, winner: null, scores: [a, b], reason: `${why} · ${tally}, 같은 점수예요` };
+  return { over: true, winner, scores: [a, b], reason: `${why} · 점수로 ${winner === 0 ? '초' : '한'} 승 (${tally})` };
+}
+
 export function status(state) {
   if (state.phase === 'setup') return { over: false };
-  if (state.facingDraw) return { over: true, draw: true, winner: null, reason: '빅장을 받아들여 무승부예요' };
-  if (state.passes >= 2) return { over: true, draw: true, winner: null, reason: '서로 한 수씩 쉬어 무승부예요' };
+  if (state.facingDraw) return byPoints(state, '빅장');
+  if (state.passes >= 2) return byPoints(state, '서로 한 수씩 쉼');
   if (state.check) {
     const moves = legalMoves(state);
     if (moves.length === 0) return { over: true, winner: 1 - state.turn, reason: '외통! 장군을 피할 수 없어요' };
   }
-  if ((state.reps[posKey(state)] || 0) >= 3) return { over: true, draw: true, winner: null, reason: '같은 국면이 세 번 나왔어요' };
-  if (state.half >= 200) return { over: true, draw: true, winner: null, reason: '200수 동안 잡힌 말이 없어 무승부예요' };
+  if ((state.reps[posKey(state)] || 0) >= 3) return byPoints(state, '같은 국면 세 번');
+  if (state.half >= 200) return byPoints(state, '200수 동안 잡힌 말 없음');
   return { over: false };
 }
 

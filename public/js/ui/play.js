@@ -389,6 +389,9 @@ export async function renderPlay() {
     let lastTurn = null;
     const origOnState = match.hooks.onState;
     match.hooks.onState = (state, events, prev, animate) => {
+      // 배틀십의 결과 공개 대기처럼 '진짜 차례 넘김'이 아닌 중간 상태에서는 커튼을 건너뛴다
+      const midTurn = meta.midTurn ? !!meta.midTurn(state) : false;
+      if (midTurn) { origOnState(state, events, prev, animate); return; }
       if (lastTurn !== null && state.turn !== lastTurn && !match.over) {
         // 방금 둔 사람의 시점으로 결과 애니메이션을 먼저 보여준 뒤 커튼을 내린다
         viewerOverride = lastTurn;
@@ -474,9 +477,13 @@ export async function renderPlay() {
   }
 
   // ---------- 시뮬레이션 훅 (테스트 전용) ----------
-  if (cfg.sim) {
+  // localStorage 의 hanpan.debug=1 로도 켜진다 (온라인 자동 점검용). 새 정보를 노출하지는 않는다 —
+  // 어차피 이 기기가 가진 것뿐이고, 상대 함대처럼 없는 정보는 여기에도 없다.
+  let debugHook = false;
+  try { debugHook = localStorage.getItem('hanpan.debug') === '1'; } catch { /* */ }
+  if (cfg.sim || debugHook) {
     window.__hanpan = {
-      gameId: cfg.gameId, players: n, match, ctx,
+      gameId: cfg.gameId, players: n, match, ctx, mySeat,
       step() {
         if (match.over) return { over: true };
         const ms = match.legalMoves();
@@ -502,7 +509,7 @@ export async function renderPlay() {
     window.removeEventListener('resize', onResize);
     window.removeEventListener('orientationchange', onResize);
     clearTimeout(fitTimer);
-    if (cfg.sim) delete window.__hanpan;
+    if (window.__hanpan && window.__hanpan.match === match) delete window.__hanpan;
     match.stop();
     offs.forEach((o) => o());
     try { view && view.destroy && view.destroy(); } catch { /* */ }

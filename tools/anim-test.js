@@ -61,9 +61,17 @@ for (const game of GAMES) {
     const over = await page.evaluate(() => !!(window.__hanpan && window.__hanpan.isOver));
     if (over && restarts < 3) { restarts++; await page.evaluate(() => window.__hanpan.restart()); await sleep(900); }
   }
+  // 진행 중인 연출이 끝난 뒤에 측정한다 (이동 중에는 도착 칸 말을 일부러 숨겨 두기 때문)
+  await page.evaluate(() => new Promise((done) => {
+    const wait = () => {
+      const left = window.__hanpan ? window.__hanpan.match.lockUntil - performance.now() : 0;
+      if (left > 0) setTimeout(wait, left + 80); else setTimeout(done, 250);
+    };
+    wait();
+  }));
   const r = await page.evaluate(() => {
     const a = window.__anim;
-    // 화면에서 사라진(opacity 0) 말이 남아 있는지 — 연출이 잘렸을 때 생기는 흔적
+    // 연출이 끝났는데도 사라진(opacity 0) 말이 남아 있으면 연출이 잘린 흔적이다
     const stuck = [...document.querySelectorAll('.board-area *')].filter((el) => el.style && el.style.opacity === '0').length;
     return { updates: a.updates.length, animated: a.updates.filter((u) => u.animate).length, overlaps: a.overlaps.slice(0, 5), overlapCount: a.overlaps.length, stuck };
   });

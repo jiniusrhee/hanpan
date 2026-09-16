@@ -102,6 +102,7 @@ npm run test:bots                          # 봇 품질 점검 (쉬움/보통 vs
 npm run shots                              # 헤드리스 크롬 스크린샷 (localhost:3210 서버 필요)
 npm run test:online                        # 브라우저 여러 개로 온라인 대전 흐름 점검 (기본 localhost:3210, SERVER=https://... 로 배포 서버 지정)
 npm run test:anim                          # 봇 대전 애니메이션 잘림 검사 (localhost:3210 서버 필요)
+npm run test:battleship                    # 온라인 배틀십 비밀 유지 검사 (상대 함대가 내 기기로 오지 않는지)
 node tools/sim-devices.js --out ./sim      # 15종 기기 × 모든 게임 × 인원수 레이아웃 시뮬레이션 (설정당 100턴)
 node tools/sleepy-proxy.js --sleep 12000   # 잠든 서버 흉내 (3211 → 3210). 이어서 PROXY_WS=ws://localhost:3211/ws node tools/wake-test.js ./wake-shots 로 깨우기 화면 점검
 ```

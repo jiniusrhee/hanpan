@@ -255,8 +255,10 @@ const handlers = {
       return send(ws, { t: 'room', room: publicRoom(room, ws.ctx.token), mySeat: ws.ctx.seat });
     }
     const entry = { seat, move: m.move, idx: room.moves.length };
+    // 비밀이 담긴 수는 원본을 보관하되(그 자리 주인의 재접속용) 다른 사람에게는 가린 형태만 보낸다
+    if (m.publicMove !== undefined) entry.publicMove = m.publicMove;
     room.moves.push(entry);
-    broadcast(room, { t: 'move', ...entry }, ws);
+    broadcast(room, { t: 'move', seat, idx: entry.idx, move: entry.publicMove !== undefined ? entry.publicMove : entry.move }, ws);
   },
 
   undo(ws, m) {

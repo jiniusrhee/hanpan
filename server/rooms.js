@@ -74,6 +74,18 @@ export function newToken() {
   return randomBytes(16).toString('hex');
 }
 
+// 그 사람이 봐도 되는 형태의 수 목록 (내 자리의 비밀 수는 원본, 남의 것은 가린 것)
+function movesFor(room, forToken) {
+  if (!room.moves.some((e) => e.publicMove !== undefined)) return room.moves;
+  const isHost = !!forToken && forToken === room.hostToken;
+  return room.moves.map((e) => {
+    if (e.publicMove === undefined) return e;
+    const s = room.seats[e.seat];
+    const mine = !!s && ((s.token && s.token === forToken) || (s.type === 'bot' && isHost));
+    return { seat: e.seat, idx: e.idx, move: mine ? e.move : e.publicMove };
+  });
+}
+
 // 클라이언트에 보내도 되는 형태로 요약
 export function publicRoom(room, forToken) {
   return {
@@ -84,7 +96,7 @@ export function publicRoom(room, forToken) {
     status: room.status,
     seed: room.seed,
     round: room.round,
-    moves: room.moves,
+    moves: movesFor(room, forToken),
     hostSeat: room.seats.findIndex(s => s.token && s.token === room.hostToken),
     isHost: !!forToken && forToken === room.hostToken,
     mySeat: room.seats.findIndex(s => s.token && s.token === forToken),

@@ -112,8 +112,25 @@ export const invariants = {
     return null;
   },
   battleship(state, prev, move, events, mod) {
+    for (const seat of [0, 1]) {
+      // 격침된 함선 목록과 공개된 모양이 일치해야 한다
+      if (state.sunkShips[seat].length !== state.sunk[seat].length) return `격침 목록 불일치 (좌석 ${seat})`;
+      for (const sh of state.sunkShips[seat]) {
+        if (!state.sunk[seat].includes(sh.ship)) return `공개된 함선이 격침 목록에 없음 (좌석 ${seat})`;
+        if (sh.len !== mod.SHIPS[sh.ship].len) return `공개된 함선 길이 ${sh.len} (좌석 ${seat})`;
+        for (const c of mod.shipCells(sh)) if (state.shots[1 - seat][c] !== 2) return `격침됐는데 안 맞은 칸이 있음 (좌석 ${seat})`;
+      }
+      if (new Set(state.sunk[seat]).size !== state.sunk[seat].length) return `같은 함선이 두 번 격침 (좌석 ${seat})`;
+    }
+    if (state.pendingShot) {
+      const p = state.pendingShot;
+      if (state.turn !== 1 - p.by) return '결과를 공개할 차례가 맞은 쪽이 아님';
+      if (state.shots[p.by][p.i] !== 0) return '이미 쏜 칸을 다시 쏨';
+    }
+    if (prev && move && move.fire != null && !state.pendingShot) return '쏘고도 결과 대기 상태가 아님';
     if (state.phase !== 'play') return null;
     for (const s of [0, 1]) {
+      if (!state.ships[s]) continue;   // 온라인에서는 상대 배치를 아예 갖고 있지 않다
       if (!mod.validPlacement(state.ships[s])) return `배치가 규칙 위반 (좌석 ${s})`;
       for (const idx of state.sunk[s]) for (const c of mod.shipCells(state.ships[s][idx])) if (state.shots[1 - s][c] !== 2) return '격침 판정된 배에 안 맞은 칸';
     }

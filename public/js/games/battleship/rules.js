@@ -12,13 +12,21 @@ export const meta = {
   undo: false,
   hidden: true,
   resultDelay: 1600,
+  // 배치 수에는 내 함대 위치가 담겨 있으므로 상대에게는 가려서 보낸다 (상대 기기는 내 배치를 아예 받지 않는다)
+  redactMove: (m) => (m && m.place ? { place: null } : undefined),
+  // 포격 결과는 맞은 쪽 기기가 자기 배치를 보고 공개한다 — 고를 것이 없으니 자동으로 처리
+  autoMove: (state, move) => move.reveal !== undefined,
+  autoMoveDelay: 0,
+  // 결과 공개 대기는 진짜 차례 넘김이 아니다 (핫시트 커튼을 내리지 않는다)
+  midTurn: (state) => !!state.pendingShot,
   rules: `## 목표
 상대의 함선 5척(길이 5·4·3·3·2)을 모두 격침시키면 승리해요.
 
 ## 진행
 - **배치**: 내 바다에 함선을 놓아요. 함선을 고른 뒤 칸을 누르면 놓이고, 회전 버튼으로 방향을 바꿔요. '랜덤 배치'도 있어요. 함선끼리 겹칠 수는 없지만 딱 붙여 놓는 건 괜찮아요. 이미 쏜 칸은 다시 쏠 수 없어요.
 - **포격**: 번갈아 상대 바다의 한 칸을 골라 쏴요. 명중이면 🔥, 빗나가면 💧가 표시돼요.
-- 한 함선의 모든 칸을 맞히면 격침! 격침된 함선은 상대에게도 공개돼요.
+- 한 함선의 모든 칸을 맞히면 격침! 격침된 함선만 상대에게 공개돼요.
+- 내 함대 위치는 **내 기기에만** 있어요. 상대에게는 쏜 칸의 명중·빗나감만 전해져요.
 - 설정에 따라 명중하면 한 번 더 쏠 수도 있어요.
 
 ## 팁
@@ -30,7 +38,16 @@ const N = 10;
 export const SHIPS = [{ len: 5, name: '항공모함' }, { len: 4, name: '전함' }, { len: 3, name: '순양함' }, { len: 3, name: '잠수함' }, { len: 2, name: '구축함' }];
 
 export function init(options, seed) {
-  return { turn: 0, phase: 'place', again: options.again ? 1 : 0, ships: [null, null], shots: [Array(100).fill(0), Array(100).fill(0)], sunk: [[], []], last: null, rng: seed | 0 };
+  return {
+    turn: 0, phase: 'place', again: options.again ? 1 : 0,
+    ships: [null, null],        // 내 기기가 아는 배치만 담긴다 (온라인에서 상대 것은 끝까지 null)
+    placed: [false, false],     // 배치를 마쳤는지 — 이건 모두가 알아도 되는 정보
+    shots: [Array(100).fill(0), Array(100).fill(0)],
+    sunk: [[], []],
+    sunkShips: [[], []],        // 격침돼 공개된 함선 { ship, r, c, len, dir }
+    pendingShot: null,          // { by, i } — 맞은 쪽이 결과를 공개할 차례
+    last: null, rng: seed | 0,
+  };
 }
 
 export function shipCells(s) {
@@ -49,6 +66,27 @@ export function validPlacement(ships) {
     for (const cell of shipCells(s)) { if (used.has(cell)) return false; used.add(cell); }
   }
   return true;
+}
+
+// 격침 공개로 들어온 함선 모양이 말이 되는지 (상대 기기를 그대로 믿지 않기 위한 최소 검증)
+function validSunkShip(sh, idx) {
+  if (!sh || sh.len !== SHIPS[idx].len || (sh.dir !== 'h' && sh.dir !== 'v')) return false;
+  if (!Number.isInteger(sh.r) || !Number.isInteger(sh.c) || sh.r < 0 || sh.c < 0) return false;
+  return sh.dir === 'h' ? sh.c + sh.len <= N && sh.r < N : sh.r + sh.len <= N && sh.c < N;
+}
+
+// 맞은 쪽이 자기 배치를 보고 만드는 결과. 그 배치를 모르는 기기(=쏜 쪽)에서는 만들 수 없다.
+export function revealFor(state) {
+  const p = state.pendingShot;
+  if (!p) return null;
+  const fleet = state.ships[1 - p.by];
+  if (!fleet) return null;
+  let idx = -1;
+  fleet.forEach((sh, k) => { if (shipCells(sh).includes(p.i)) idx = k; });
+  if (idx < 0) return { reveal: -1 };
+  const cells = shipCells(fleet[idx]);
+  const sank = cells.every((c) => c === p.i || state.shots[p.by][c] === 2);
+  return sank ? { reveal: idx, ship: { ...fleet[idx] } } : { reveal: idx };
 }
 
 export function randomPlacement(rng) {
@@ -79,6 +117,7 @@ export function legalMoves(state) {
     const rng = makeRng(state.rng ^ (state.turn * 7919));
     return [{ place: randomPlacement(rng) }];
   }
+  if (state.pendingShot) { const r = revealFor(state); return r ? [r] : []; }
   const out = [];
   const shots = state.shots[state.turn];
   for (let i = 0; i < 100; i++) if (!shots[i]) out.push({ fire: i });
@@ -87,34 +126,57 @@ export function legalMoves(state) {
 
 export function isLegal(state, m) {
   if (!m || status(state).over) return false;
-  if (state.phase === 'place') return !!m.place && validPlacement(m.place);
+  // place: null 은 상대에게 가려서 전달된 배치 완료 신호
+  if (state.phase === 'place') return m.place === null || (!!m.place && validPlacement(m.place));
+  if (state.pendingShot) {
+    const p = state.pendingShot, target = 1 - p.by;
+    if (!Number.isInteger(m.reveal) || m.reveal < -1 || m.reveal >= SHIPS.length) return false;
+    if (m.reveal >= 0 && state.sunk[target].includes(m.reveal)) return false;
+    if (m.ship != null && !(m.reveal >= 0 && validSunkShip(m.ship, m.reveal))) return false;
+    const truth = revealFor(state);
+    if (truth) {
+      // 그 배치를 아는 기기에서는 진짜 결과와 정확히 같아야 한다
+      if (truth.reveal !== m.reveal || !truth.ship !== !m.ship) return false;
+      if (truth.ship && (truth.ship.r !== m.ship.r || truth.ship.c !== m.ship.c || truth.ship.dir !== m.ship.dir)) return false;
+      return true;
+    }
+    // 상대 배치를 모르는 기기(=쏜 쪽)에서는 공개 정보, 즉 내가 쏜 기록만으로 검증한다.
+    if (m.ship == null) return true;                          // 명중·빗나감 주장은 더 확인할 방법이 없다
+    const cells = shipCells(m.ship);
+    if (!cells.includes(p.i)) return false;                   // 방금 맞힌 칸이 그 배에 없다
+    if (!cells.every((c) => c === p.i || state.shots[p.by][c] === 2)) return false;   // 격침이면 나머지 칸도 이미 맞혔어야 한다
+    for (const sh of state.sunkShips[target]) if (shipCells(sh).some((c) => cells.includes(c))) return false;  // 이미 공개된 배와 겹친다
+    return true;
+  }
   return Number.isInteger(m.fire) && m.fire >= 0 && m.fire < 100 && !state.shots[state.turn][m.fire];
 }
 
 export function apply(state, m) {
   if (state.phase === 'place') {
     const ships = state.ships.slice();
-    ships[state.turn] = m.place.map((s) => ({ ...s }));
-    const both = ships[0] && ships[1];
-    return { state: { ...state, ships, turn: both ? 0 : 1 - state.turn, phase: both ? 'play' : 'place' }, events: [{ type: 'placed', seat: state.turn }] };
+    const placed = state.placed.slice();
+    placed[state.turn] = true;
+    if (m.place) ships[state.turn] = m.place.map((s) => ({ ...s }));
+    const both = placed[0] && placed[1];
+    return { state: { ...state, ships, placed, turn: both ? 0 : 1 - state.turn, phase: both ? 'play' : 'place' }, events: [{ type: 'placed', seat: state.turn }] };
   }
-  const seat = state.turn, opp = 1 - seat;
+  // 1단계: 쏜다. 결과는 아직 아무도 모른다 — 차례를 맞은 쪽으로 넘겨 결과를 공개받는다.
+  if (m.fire != null) {
+    return { state: { ...state, pendingShot: { by: state.turn, i: m.fire }, turn: 1 - state.turn }, events: [{ type: 'aim', seat: state.turn, i: m.fire }] };
+  }
+  // 2단계: 맞은 쪽이 결과를 공개한다.
+  const { by, i } = state.pendingShot;
+  const target = 1 - by;
   const shots = state.shots.map((a) => a.slice());
   const sunk = state.sunk.map((a) => a.slice());
-  let hitShip = -1;
-  state.ships[opp].forEach((s, idx) => { if (shipCells(s).includes(m.fire)) hitShip = idx; });
-  shots[seat][m.fire] = hitShip >= 0 ? 2 : 1;
-  const events = [];
-  let isSunk = false;
-  if (hitShip >= 0) {
-    const cells = shipCells(state.ships[opp][hitShip]);
-    isSunk = cells.every((c) => shots[seat][c] === 2);
-    if (isSunk) sunk[opp].push(hitShip);
-  }
-  events.push({ type: 'shot', seat, i: m.fire, result: hitShip < 0 ? 'miss' : isSunk ? 'sunk' : 'hit', ship: hitShip });
-  const allSunk = sunk[opp].length === SHIPS.length;
-  const keep = state.again && hitShip >= 0 && !allSunk;
-  return { state: { ...state, shots, sunk, turn: keep ? seat : opp, last: { seat, i: m.fire } }, events };
+  const sunkShips = state.sunkShips.map((a) => a.slice());
+  shots[by][i] = m.reveal >= 0 ? 2 : 1;
+  let result = m.reveal < 0 ? 'miss' : 'hit';
+  if (m.reveal >= 0 && m.ship) { sunk[target].push(m.reveal); sunkShips[target].push({ ship: m.reveal, ...m.ship }); result = 'sunk'; }
+  const events = [{ type: 'shot', seat: by, i, result, ship: m.reveal }];
+  const allSunk = sunk[target].length === SHIPS.length;
+  const keep = state.again && m.reveal >= 0 && !allSunk;
+  return { state: { ...state, shots, sunk, sunkShips, pendingShot: null, turn: keep ? by : target, last: { seat: by, i } }, events };
 }
 
 export function status(state) {
@@ -127,10 +189,11 @@ export function status(state) {
 export function ai(state, level = 2) {
   const rng = makeRng();
   if (state.phase === 'place') return { place: randomPlacement(rng) };
+  if (state.pendingShot) return revealFor(state);   // 내 바다가 맞았으면 결과를 공개한다
   const seat = state.turn, opp = 1 - seat;
   const shots = state.shots[seat];
   const sunkCells = new Set();
-  for (const idx of state.sunk[opp]) for (const c of shipCells(state.ships[opp][idx])) sunkCells.add(c);
+  for (const sh of state.sunkShips[opp]) for (const c of shipCells(sh)) sunkCells.add(c);
   const empty = [];
   for (let i = 0; i < 100; i++) if (!shots[i]) empty.push(i);
   if (level === 1 && rng.next() < 0.5) return { fire: rng.pick(empty) };

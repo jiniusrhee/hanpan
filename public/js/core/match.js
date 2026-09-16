@@ -116,7 +116,13 @@ export class Match {
     this.history.push({ state: prev, move, seat });
     this.state = res.state;
     if (this.isOnline && origin !== 'remote' && this.net) {
-      this.net.send({ t: 'move', move, seat, idx: this.history.length - 1 });
+      // 비밀이 담긴 수(배틀십 배치)는 상대에게 가린 형태로만 보낸다
+      const redact = (this.rules.meta || {}).redactMove;
+      let pub;
+      try { pub = redact ? redact(move, seat) : undefined; } catch { pub = undefined; }
+      const msg = { t: 'move', move, seat, idx: this.history.length - 1 };
+      if (pub !== undefined) msg.publicMove = pub;
+      this.net.send(msg);
     }
     this.hooks.onState && this.hooks.onState(this.state, res.events || [], prev, true);
     if (!this.checkOver()) this.next();
@@ -135,24 +141,32 @@ export class Match {
   next() {
     if (this.over || this.stopped) return;
     const seat = this.state.turn;
+    if (this.autoMoveIfForced()) { this.hooks.onTurn && this.hooks.onTurn(seat); return; }
     if (this.isLocalBot(seat)) this.scheduleBot();
-    else this.autoPassIfForced();
     this.hooks.onTurn && this.hooks.onTurn(seat);
   }
 
-  // 둘 수 있는 수가 강제 패스 하나뿐이면(오셀로처럼) 사람이 누를 것이 없으므로 알아서 넘긴다.
-  // 이게 없으면 그 좌석에서 판이 영구히 멈춘다.
-  autoPassIfForced() {
+  // 고를 것이 없는 강제 수는 알아서 둔다.
+  //  - 오셀로: 둘 곳이 없을 때의 패스 (이게 없으면 사람 좌석에서 판이 영구히 멈춘다)
+  //  - 배틀십: 내 바다가 맞았을 때의 결과 공개 (내 기기만 내 배치를 알기 때문에 내가 공개해야 한다)
+  autoMoveIfForced() {
     const meta = this.rules.meta || {};
-    if (!meta.autoPass || !this.isLocalHuman(this.state.turn)) return false;
-    const ms = this.legalMoves();
-    if (ms.length !== 1 || !ms[0].pass) return false;
-    const state = this.state, seat = this.state.turn, move = ms[0];
+    const seat = this.state.turn;
+    if (!this.isLocalHuman(seat) && !this.isLocalBot(seat)) return false;
+    const forced = meta.autoPass ? (s, m) => !!m.pass : meta.autoMove;
+    if (!forced) return false;
+    let ms;
+    try { ms = this.legalMoves(); } catch { return false; }
+    if (ms.length !== 1 || !forced(this.state, ms[0])) return false;
+    const state = this.state, move = ms[0];
+    const delay = meta.autoMoveDelay != null ? meta.autoMoveDelay : 700;
     clearTimeout(this.passTimer);
-    this.passTimer = setTimeout(() => {
+    const fire = () => {
       if (this.stopped || this.over || this.state !== state) return;
       this.commit(move, seat, 'auto');
-    }, Math.max(700, this.lockUntil - performance.now() + BOT_GAP_MS));
+    };
+    const wait = Math.max(delay, this.lockUntil - performance.now() + (delay ? BOT_GAP_MS : 0));
+    this.passTimer = setTimeout(fire, Math.max(0, wait));
     return true;
   }
 

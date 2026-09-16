@@ -108,7 +108,7 @@ export function create(root, ctx) {
     wrap.append(h('div', { class: 'side-aux' }, h('div', { class: 'bs-label' }, h('span', { text: '내 바다' })), miniWrap), h('div', { class: 'side-main' }, h('div', { class: 'bs-label' }, h('span', { text: '상대 바다 · 누르면 포격' }), h('span', { id: 'bs-left' })), seaWrap));
     mini = new GridBoard(miniWrap, { rows: N, cols: N, style: 'plain', theme: 'blue' });
     shipLayerMini = h('div', { class: 'bs-ships' }); mini.el.appendChild(shipLayerMini);
-    big = new GridBoard(seaWrap, { rows: N, cols: N, style: 'plain', theme: 'blue', onCell(r, c) { if (!ctx.canAct()) return; const mv = ctx.legalMoves().find((m) => m.fire === r * N + c); if (!mv) { ctx.sound.play('error'); return; } ctx.submit(mv); } });
+    big = new GridBoard(seaWrap, { rows: N, cols: N, style: 'plain', theme: 'blue', onCell(r, c) { if (!ctx.canAct() || ctx.match.state.pendingShot) return; const mv = ctx.legalMoves().find((m) => m.fire === r * N + c); if (!mv) { ctx.sound.play('error'); return; } ctx.submit(mv); } });
     shipLayerBig = h('div', { class: 'bs-ships' }); big.el.appendChild(shipLayerBig);
   }
 
@@ -119,9 +119,9 @@ export function create(root, ctx) {
     (state.ships[viewer] || []).forEach((s, i) => shipLayerMini.appendChild(shipDiv(s, state.sunk[viewer].includes(i) ? 'sunk' : '')));
     const myShots = state.shots[opp];
     mini.sync(myShots.map((v, i) => (v ? { id: 'm' + i, r: (i / N) | 0, c: i % N, html: v === 2 ? HIT : MISS } : null)).filter(Boolean), { animate });
-    // 상대 바다: 내가 쏜 곳 + 격침된 상대 배
+    // 상대 바다: 내가 쏜 곳 + 격침돼 공개된 상대 배 (상대 배치 전체는 이 기기에 없다)
     shipLayerBig.innerHTML = '';
-    (state.ships[opp] || []).forEach((s, i) => { if (state.sunk[opp].includes(i)) shipLayerBig.appendChild(shipDiv(s, 'sunk')); });
+    (state.sunkShips[opp] || []).forEach((sh) => shipLayerBig.appendChild(shipDiv(sh, 'sunk')));
     const shots = state.shots[viewer];
     big.sync(shots.map((v, i) => (v ? { id: 's' + i, r: (i / N) | 0, c: i % N, html: v === 2 ? HIT : MISS } : null)).filter(Boolean), { animate });
     const leftEl = wrap.querySelector('#bs-left');
@@ -149,15 +149,16 @@ export function create(root, ctx) {
         if (phaseBuilt !== 'place' || (prev && prev.turn !== state.turn)) buildPlace(state);
         if (!ctx.canAct()) ctx.setStatus(ctx.online || ctx.mode === 'bot' ? '상대가 함선을 배치하는 중…' : `${ctx.seats[state.turn].name}님이 배치할 차례예요`);
         if (ctx.canAct() && draft.length === 0) { /* 초기 상태 */ }
-        ctx.setSeatInfo(0, { score: '', sub: `${ctx.seatNames[0]}${state.ships[0] ? ' · 배치 완료' : ''}` });
-        ctx.setSeatInfo(1, { score: '', sub: `${ctx.seatNames[1]}${state.ships[1] ? ' · 배치 완료' : ''}` });
+        ctx.setSeatInfo(0, { score: '', sub: `${ctx.seatNames[0]}${state.placed[0] ? ' · 배치 완료' : ''}` });
+        ctx.setSeatInfo(1, { score: '', sub: `${ctx.seatNames[1]}${state.placed[1] ? ' · 배치 완료' : ''}` });
         return;
       }
       if (phaseBuilt !== 'play') buildPlay();
       renderPlay(state, viewer, events, animate);
       ctx.setSeatInfo(0, { score: `🚢${SHIPS.length - state.sunk[0].length}`, sub: ctx.seatNames[0] });
       ctx.setSeatInfo(1, { score: `🚢${SHIPS.length - state.sunk[1].length}`, sub: ctx.seatNames[1] });
-      if (ctx.canAct()) ctx.setStatus('상대 바다에서 쏠 칸을 누르세요');
+      if (state.pendingShot) ctx.setStatus('결과를 확인하는 중…');
+      else if (ctx.canAct()) ctx.setStatus('상대 바다에서 쏠 칸을 누르세요');
     },
     reset() { phaseBuilt = null; clearAll(); },
     destroy() { clearAll(); wrap.remove(); style.remove(); },

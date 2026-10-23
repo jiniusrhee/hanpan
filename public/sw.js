@@ -1,11 +1,11 @@
 // 서비스 워커: 앱 껍데기와 게임 모듈을 캐시해서 설치형 앱처럼, 오프라인에서도 혼자 하기가 되게 한다.
 // 경로는 모두 이 파일이 놓인 위치(scope) 기준이라 루트/하위 경로 배포 모두 동작한다.
-const VERSION = 'hanpan-v4';
+const VERSION = 'hanpan-v5';
 const GAMES = ['chess', 'janggi', 'othello', 'gomoku', 'go', 'checkers', 'connect4', 'tictactoe', 'ultimate', 'mancala', 'morris', 'hex', 'dots', 'battleship', 'quoridor', 'backgammon', 'yut', 'ludo', 'blokus', 'yacht', 'g2048', 'minesweeper', 'sudoku'];
 const CORE = [
   './', './index.html', './config.js', './manifest.json', './css/app.css', './img/icon.svg', './img/icon-192.png', './img/icon-512.png', './img/og.png',
   './js/app.js',
-  ...['ai-worker', 'ai', 'board', 'bot', 'fx', 'haptics', 'install', 'match', 'net', 'registry', 'rng', 'router', 'session', 'share', 'sound', 'store', 'util'].map((m) => `./js/core/${m}.js`),
+  ...['ai-worker', 'ai', 'board', 'bot', 'fx', 'hash', 'haptics', 'install', 'match', 'net', 'registry', 'rng', 'router', 'session', 'share', 'sound', 'store', 'util'].map((m) => `./js/core/${m}.js`),
   ...['home', 'lobby', 'modal', 'play', 'setup', 'toast', 'wake'].map((m) => `./js/ui/${m}.js`),
   './js/games/chess/pieces.js',
   ...GAMES.flatMap((g) => [`./js/games/${g}/rules.js`, `./js/games/${g}/view.js`]),

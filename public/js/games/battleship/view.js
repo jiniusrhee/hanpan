@@ -1,6 +1,6 @@
 import { GridBoard } from '../../core/board.js';
 import { h } from '../../core/util.js';
-import { SHIPS, shipCells, validPlacement, randomPlacement } from './rules.js';
+import { SHIPS, shipCells, validPlacement, randomPlacement, withSalt } from './rules.js';
 import { makeRng } from '../../core/rng.js';
 
 const N = 10;
@@ -19,6 +19,8 @@ export function create(root, ctx) {
     .bs-ship.sunk { background: linear-gradient(180deg, #6b2a2a, #3a1414); border-color: rgba(255,90,90,.5); }
     .bs-ship.ghost { opacity: .55; }
     .bs-ship.bad { background: #ff3b3b; opacity: .6; }
+    .bs-ship.revealed { background: transparent; border: 2px dashed rgba(255,255,255,.75); box-shadow: none; animation: bs-reveal .5s ease-out both; }
+    @keyframes bs-reveal { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: scale(.86); } }
     .bs-tray { display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; justify-content: safe center; margin-top: 8px; padding: 2px; }
     .bs-tray::-webkit-scrollbar { display: none; }
     .bs-tray button { flex: none; }
@@ -33,6 +35,7 @@ export function create(root, ctx) {
   root.appendChild(style);
 
   let phaseBuilt = null;
+  let proofTimer = null;
   let big = null, mini = null;
   let draft = [], sel = 0, dir = 'h';
   let shipLayerBig = null, shipLayerMini = null;
@@ -64,7 +67,7 @@ export function create(root, ctx) {
     controls = h('div', { class: 'row', style: { justifyContent: 'center', gap: '6px', marginTop: '8px' } },
       h('button', { class: 'btn btn-sm', text: '🔄 회전', onclick: () => { dir = dir === 'h' ? 'v' : 'h'; const cur = draft[sel]; if (cur) { const t = { ...cur, dir }; draft[sel] = null; if (fits(t)) draft[sel] = t; else draft[sel] = cur; } renderPlace(); ctx.sound.play('click'); } }),
       h('button', { class: 'btn btn-sm', text: '🎲 랜덤 배치', onclick: () => { draft = randomPlacement(makeRng()); renderPlace(); ctx.sound.play('dice'); } }),
-      h('button', { class: 'btn btn-sm btn-primary', text: '✓ 배치 완료', onclick: () => { if (!validPlacement(draft)) { ctx.sound.play('error'); return; } ctx.submit({ place: draft }); } }));
+      h('button', { class: 'btn btn-sm btn-primary', text: '✓ 배치 완료', onclick: () => { if (!validPlacement(draft)) { ctx.sound.play('error'); return; } ctx.submit(withSalt({ place: draft })); } }));
     wrap.append(h('div', { class: 'side-aux' }, tray, controls));
     renderPlace();
   }
@@ -105,10 +108,10 @@ export function create(root, ctx) {
     clearAll(); phaseBuilt = 'play';
     const miniWrap = h('div', { class: 'bs-mini bs-sea' });
     const seaWrap = h('div', { class: 'bs-sea big' });
-    wrap.append(h('div', { class: 'side-aux' }, h('div', { class: 'bs-label' }, h('span', { text: '내 바다' })), miniWrap), h('div', { class: 'side-main' }, h('div', { class: 'bs-label' }, h('span', { text: '상대 바다 · 누르면 포격' }), h('span', { id: 'bs-left' })), seaWrap));
+    wrap.append(h('div', { class: 'side-aux' }, h('div', { class: 'bs-label' }, h('span', { text: '내 바다' })), miniWrap), h('div', { class: 'side-main' }, h('div', { class: 'bs-label' }, h('span', { class: 'bs-opp-label', text: '상대 바다 · 누르면 포격' }), h('span', { id: 'bs-left' })), seaWrap));
     mini = new GridBoard(miniWrap, { rows: N, cols: N, style: 'plain', theme: 'blue' });
     shipLayerMini = h('div', { class: 'bs-ships' }); mini.el.appendChild(shipLayerMini);
-    big = new GridBoard(seaWrap, { rows: N, cols: N, style: 'plain', theme: 'blue', onCell(r, c) { if (!ctx.canAct() || ctx.match.state.pendingShot) return; const mv = ctx.legalMoves().find((m) => m.fire === r * N + c); if (!mv) { ctx.sound.play('error'); return; } ctx.submit(mv); } });
+    big = new GridBoard(seaWrap, { rows: N, cols: N, style: 'plain', theme: 'blue', onCell(r, c) { const st = ctx.match.state; if (!ctx.canAct() || st.pendingShot || st.phase !== 'play') return; const mv = ctx.legalMoves().find((m) => m.fire === r * N + c); if (!mv) { ctx.sound.play('error'); return; } ctx.submit(mv); } });
     shipLayerBig = h('div', { class: 'bs-ships' }); big.el.appendChild(shipLayerBig);
   }
 
@@ -122,11 +125,21 @@ export function create(root, ctx) {
     // 상대 바다: 내가 쏜 곳 + 격침돼 공개된 상대 배 (상대 배치 전체는 이 기기에 없다)
     shipLayerBig.innerHTML = '';
     (state.sunkShips[opp] || []).forEach((sh) => shipLayerBig.appendChild(shipDiv(sh, 'sunk')));
+    if (state.phase === 'done' && state.proof && state.proof.ok && state.ships[opp]) {
+      state.ships[opp].forEach((sh, i) => { if (!state.sunk[opp].includes(i)) shipLayerBig.appendChild(shipDiv(sh, 'revealed')); });
+    }
     const shots = state.shots[viewer];
     big.sync(shots.map((v, i) => (v ? { id: 's' + i, r: (i / N) | 0, c: i % N, html: v === 2 ? HIT : MISS } : null)).filter(Boolean), { animate });
+    const oppLabel = wrap.querySelector('.bs-opp-label');
+    if (oppLabel) oppLabel.textContent = state.phase === 'done' ? (state.proof && state.proof.ok ? '상대 바다 · 남은 함대 공개' : '상대 바다 · 함대 확인 실패') : '상대 바다 · 누르면 포격';
     const leftEl = wrap.querySelector('#bs-left');
     if (leftEl) leftEl.textContent = `남은 적함 ${SHIPS.length - state.sunk[opp].length}척`;
     if (animate) for (const ev of events) {
+      if (ev.type === 'proof') {
+        if (!ev.ok) { ctx.fx.stamp('반칙 적발!', { glow: 'rgba(255,92,122,.95)' }); ctx.sound.play('alert'); ctx.haptics.heavy(); }
+        else if (ev.seat !== viewer) setTimeout(() => ctx.fx.stamp('상대 함대 공개', { small: true, glow: 'rgba(88,166,255,.9)' }), 200);
+        continue;
+      }
       if (ev.type !== 'shot') continue;
       const onBig = ev.seat === viewer;
       const b = onBig ? big : mini;
@@ -157,10 +170,15 @@ export function create(root, ctx) {
       renderPlay(state, viewer, events, animate);
       ctx.setSeatInfo(0, { score: `🚢${SHIPS.length - state.sunk[0].length}`, sub: ctx.seatNames[0] });
       ctx.setSeatInfo(1, { score: `🚢${SHIPS.length - state.sunk[1].length}`, sub: ctx.seatNames[1] });
-      if (state.pendingShot) ctx.setStatus('결과를 확인하는 중…');
+      clearTimeout(proofTimer);
+      if (state.phase === 'proof') {
+        ctx.setStatus('함대 배치를 확인하는 중…');
+        // 이긴 쪽 기기가 증명을 보내지 않으면 결과를 확정할 수 없다 — 기다리기만 하지 않게 알려 준다
+        proofTimer = setTimeout(() => { if (ctx.match.state.phase === 'proof') ctx.setStatus('<b style="color:var(--bad)">상대가 함대를 공개하지 않아요.</b> 결과를 확정할 수 없어요.'); }, 9000);
+      } else if (state.pendingShot) ctx.setStatus('결과를 확인하는 중…');
       else if (ctx.canAct()) ctx.setStatus('상대 바다에서 쏠 칸을 누르세요');
     },
     reset() { phaseBuilt = null; clearAll(); },
-    destroy() { clearAll(); wrap.remove(); style.remove(); },
+    destroy() { clearTimeout(proofTimer); clearAll(); wrap.remove(); style.remove(); },
   };
 }

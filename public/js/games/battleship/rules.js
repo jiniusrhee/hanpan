@@ -1,5 +1,6 @@
 // 배틀십 규칙 + 봇 (배치 → 포격, 헌트/타겟 봇)
 import { makeRng, nextRand } from '../../core/rng.js';
+import { sha256Hex, randomSalt } from '../../core/hash.js';
 
 export const meta = {
   id: 'battleship',
@@ -13,12 +14,13 @@ export const meta = {
   hidden: true,
   resultDelay: 1600,
   // 배치 수에는 내 함대 위치가 담겨 있으므로 상대에게는 가려서 보낸다 (상대 기기는 내 배치를 아예 받지 않는다)
-  redactMove: (m) => (m && m.place ? { place: null } : undefined),
-  // 포격 결과는 맞은 쪽 기기가 자기 배치를 보고 공개한다 — 고를 것이 없으니 자동으로 처리
-  autoMove: (state, move) => move.reveal !== undefined,
+  // 대신 '이 배치로 하겠다'는 약속(해시)만 보낸다 — 판이 끝나면 이 약속과 대조한다
+  redactMove: (m) => (m && m.place ? { place: null, commit: fleetCommit(m.salt || '', m.place) } : undefined),
+  // 포격 결과 공개와 끝난 뒤 함대 증명은 고를 것이 없으니 자동으로 처리
+  autoMove: (state, move) => move.reveal !== undefined || move.proof !== undefined,
   autoMoveDelay: 0,
-  // 결과 공개 대기는 진짜 차례 넘김이 아니다 (핫시트 커튼을 내리지 않는다)
-  midTurn: (state) => !!state.pendingShot,
+  // 결과 공개·함대 증명 대기는 진짜 차례 넘김이 아니다 (핫시트 커튼을 내리지 않는다)
+  midTurn: (state) => !!state.pendingShot || state.phase === 'proof',
   rules: `## 목표
 상대의 함선 5척(길이 5·4·3·3·2)을 모두 격침시키면 승리해요.
 
@@ -29,6 +31,11 @@ export const meta = {
 - 내 함대 위치는 **내 기기에만** 있어요. 상대에게는 쏜 칸의 명중·빗나감만 전해져요.
 - 설정에 따라 명중하면 한 번 더 쏠 수도 있어요.
 
+## 공정하게
+- 배치할 때 내 함대로 만든 **약속값(해시)**만 상대에게 보내요. 위치는 보내지 않아요.
+- 판이 끝나면 이긴 쪽이 함대를 공개하고, 처음 약속·지금까지의 포격 결과와 하나라도 다르면 **반칙패**예요.
+- 함선 칸은 모두 17칸이라, 빗나감이 83칸을 넘게 나오면 결과를 숨긴 것이 확실하므로 그 자리에서 반칙패예요.
+
 ## 팁
 - 초반엔 체스판 무늬처럼 한 칸씩 건너뛰며 쏘면 효율적이에요. 가장 작은 배(2칸)도 반드시 걸리거든요.
 - 명중하면 상하좌우를 차례로 쏴서 방향을 찾으세요.`,
@@ -36,6 +43,15 @@ export const meta = {
 
 const N = 10;
 export const SHIPS = [{ len: 5, name: '항공모함' }, { len: 4, name: '전함' }, { len: 3, name: '순양함' }, { len: 3, name: '잠수함' }, { len: 2, name: '구축함' }];
+const SHIP_CELLS = SHIPS.reduce((a, s) => a + s.len, 0);   // 17
+const HEX64 = /^[0-9a-f]{64}$/, SALT = /^[0-9a-f]{0,64}$/;
+
+// 함대를 항상 같은 문자열로 (배 순서·필드 순서 고정)
+export function canonFleet(fleet) { return fleet.map((s) => `${s.r},${s.c},${s.len},${s.dir}`).join(';'); }
+// 배치 약속: 비밀 소금값 + 함대의 해시. 소금값이 없으면 함대 경우의 수가 적어 거꾸로 맞혀 볼 수 있다.
+export function fleetCommit(salt, fleet) { return sha256Hex(`hanpan-battleship-v1|${salt}|${canonFleet(fleet)}`); }
+// 배치 수에 소금값을 붙인다 (사람·봇 모두 이걸 거쳐서 낸다)
+export function withSalt(move) { return move && move.place && !move.salt ? { ...move, salt: randomSalt() } : move; }
 
 export function init(options, seed) {
   return {
@@ -46,6 +62,9 @@ export function init(options, seed) {
     sunk: [[], []],
     sunkShips: [[], []],        // 격침돼 공개된 함선 { ship, r, c, len, dir }
     pendingShot: null,          // { by, i } — 맞은 쪽이 결과를 공개할 차례
+    commits: [null, null],      // 배치 약속(해시) — 모두가 같은 값을 갖는다
+    salts: [null, null],        // 약속에 쓴 비밀 소금값 — 내 것만 안다
+    proof: null,                // 끝난 뒤 함대 증명 결과 { seat, ok, why }
     last: null, rng: seed | 0,
   };
 }
@@ -73,6 +92,28 @@ function validSunkShip(sh, idx) {
   if (!sh || sh.len !== SHIPS[idx].len || (sh.dir !== 'h' && sh.dir !== 'v')) return false;
   if (!Number.isInteger(sh.r) || !Number.isInteger(sh.c) || sh.r < 0 || sh.c < 0) return false;
   return sh.dir === 'h' ? sh.c + sh.len <= N && sh.r < N : sh.r + sh.len <= N && sh.c < N;
+}
+
+// 판이 끝난 뒤 이긴 쪽이 내는 함대 증명. 내 함대를 아는 기기에서만 만들 수 있다.
+function proofFor(state) {
+  const seat = state.turn, fleet = state.ships[seat];
+  if (!fleet) return null;
+  return { proof: { salt: state.salts[seat] || '', fleet: fleet.map((s) => ({ r: s.r, c: s.c, len: s.len, dir: s.dir })) } };
+}
+
+// 공개된 함대가 (1) 처음 약속과 같고 (2) 지금까지 알린 모든 포격 결과·격침 공개와 맞는지
+export function verifyProof(state, seat, proof) {
+  if (!proof || typeof proof !== 'object' || typeof proof.salt !== 'string' || !validPlacement(proof.fleet)) return { ok: false, why: '공개한 함대 형식이 잘못됐어요' };
+  if (fleetCommit(proof.salt, proof.fleet) !== state.commits[seat]) return { ok: false, why: '처음에 약속한 배치와 달라요' };
+  const own = new Set();
+  for (const sh of proof.fleet) for (const c of shipCells(sh)) own.add(c);
+  const shots = state.shots[1 - seat];
+  for (let c = 0; c < 100; c++) if (shots[c] && (shots[c] === 2) !== own.has(c)) return { ok: false, why: '포격 결과를 거짓으로 알렸어요' };
+  for (const sh of state.sunkShips[seat]) {
+    const f = proof.fleet[sh.ship];
+    if (f.r !== sh.r || f.c !== sh.c || f.dir !== sh.dir) return { ok: false, why: '격침 공개가 실제 배치와 달라요' };
+  }
+  return { ok: true, why: '' };
 }
 
 // 맞은 쪽이 자기 배치를 보고 만드는 결과. 그 배치를 모르는 기기(=쏜 쪽)에서는 만들 수 없다.
@@ -117,6 +158,7 @@ export function legalMoves(state) {
     const rng = makeRng(state.rng ^ (state.turn * 7919));
     return [{ place: randomPlacement(rng) }];
   }
+  if (state.phase === 'proof') { const pf = proofFor(state); return pf ? [pf] : []; }
   if (state.pendingShot) { const r = revealFor(state); return r ? [r] : []; }
   const out = [];
   const shots = state.shots[state.turn];
@@ -126,8 +168,15 @@ export function legalMoves(state) {
 
 export function isLegal(state, m) {
   if (!m || status(state).over) return false;
-  // place: null 은 상대에게 가려서 전달된 배치 완료 신호
-  if (state.phase === 'place') return m.place === null || (!!m.place && validPlacement(m.place));
+  if (state.phase === 'place') {
+    // place: null 은 상대에게 가려서 전달된 배치 완료 신호 — 약속값이 반드시 있어야 한다
+    if (m.place === null) return typeof m.commit === 'string' && HEX64.test(m.commit);
+    return !!m.place && validPlacement(m.place) && (m.salt == null || (typeof m.salt === 'string' && SALT.test(m.salt)));
+  }
+  // 증명은 모양만 확인하고 받는다. 맞는지는 apply 가 판정해 모두가 같은 결론(반칙패 여부)을 낸다.
+  // 여기서 거절하면 받는 쪽에서 동기화 오류로 처리돼 판이 끝나지 않는다.
+  if (state.phase === 'proof') return !!m.proof && typeof m.proof === 'object' && typeof m.proof.salt === 'string' && m.proof.salt.length <= 64 && Array.isArray(m.proof.fleet);
+  if (state.phase !== 'play') return false;
   if (state.pendingShot) {
     const p = state.pendingShot, target = 1 - p.by;
     if (!Number.isInteger(m.reveal) || m.reveal < -1 || m.reveal >= SHIPS.length) return false;
@@ -155,10 +204,23 @@ export function apply(state, m) {
   if (state.phase === 'place') {
     const ships = state.ships.slice();
     const placed = state.placed.slice();
+    const commits = state.commits.slice(), salts = state.salts.slice();
     placed[state.turn] = true;
-    if (m.place) ships[state.turn] = m.place.map((s) => ({ ...s }));
+    if (m.place) {
+      ships[state.turn] = m.place.map((s) => ({ r: s.r, c: s.c, len: s.len, dir: s.dir }));
+      salts[state.turn] = m.salt || '';
+      commits[state.turn] = fleetCommit(m.salt || '', m.place);
+    } else commits[state.turn] = m.commit;
     const both = placed[0] && placed[1];
-    return { state: { ...state, ships, placed, turn: both ? 0 : 1 - state.turn, phase: both ? 'play' : 'place' }, events: [{ type: 'placed', seat: state.turn }] };
+    return { state: { ...state, ships, placed, commits, salts, turn: both ? 0 : 1 - state.turn, phase: both ? 'play' : 'place' }, events: [{ type: 'placed', seat: state.turn }] };
+  }
+  // 끝난 뒤: 이긴 쪽의 함대 증명을 판정한다. 모든 기기가 같은 데이터로 같은 결론을 낸다.
+  if (state.phase === 'proof') {
+    const seat = state.turn;
+    const v = verifyProof(state, seat, m.proof);
+    const ships = state.ships.slice();
+    if (v.ok) ships[seat] = m.proof.fleet.map((s) => ({ r: s.r, c: s.c, len: s.len, dir: s.dir }));   // 이제 공개해도 되는 정보
+    return { state: { ...state, ships, phase: 'done', proof: { seat, ok: v.ok, why: v.why } }, events: [{ type: 'proof', seat, ok: v.ok, why: v.why }] };
   }
   // 1단계: 쏜다. 결과는 아직 아무도 모른다 — 차례를 맞은 쪽으로 넘겨 결과를 공개받는다.
   if (m.fire != null) {
@@ -175,20 +237,35 @@ export function apply(state, m) {
   if (m.reveal >= 0 && m.ship) { sunk[target].push(m.reveal); sunkShips[target].push({ ship: m.reveal, ...m.ship }); result = 'sunk'; }
   const events = [{ type: 'shot', seat: by, i, result, ship: m.reveal }];
   const allSunk = sunk[target].length === SHIPS.length;
-  const keep = state.again && m.reveal >= 0 && !allSunk;
-  return { state: { ...state, shots, sunk, sunkShips, pendingShot: null, turn: keep ? by : target, last: { seat: by, i } }, events };
+  const base = { ...state, shots, sunk, sunkShips, pendingShot: null, last: { seat: by, i } };
+  // 상대 함대를 다 격침시켰다 — 이긴 쪽이 자기 함대를 증명해야 판이 끝난다
+  if (allSunk) return { state: { ...base, phase: 'proof', turn: by }, events };
+  const keep = state.again && m.reveal >= 0;
+  return { state: { ...base, turn: keep ? by : target }, events };
 }
 
 export function status(state) {
+  if (state.phase === 'done') {
+    const p = state.proof;
+    if (p && p.ok) return { over: true, winner: p.seat, reason: '함대를 모두 격침시켰어요' };
+    return { over: true, winner: 1 - p.seat, reason: `반칙패 — ${(p && p.why) || '함대 증명에 실패했어요'}` };
+  }
   if (state.phase !== 'play') return { over: false };
-  for (const s of [0, 1]) if (state.sunk[s].length === SHIPS.length) return { over: true, winner: 1 - s, reason: '함대를 모두 격침시켰어요' };
+  // 함선 칸은 정확히 17칸. 빗나감이 83칸을 넘거나 명중이 17칸을 넘으면 결과를 속인 것이 확실하다.
+  for (const t of [0, 1]) {
+    let hit = 0, miss = 0;
+    const sh = state.shots[1 - t];
+    for (let c = 0; c < 100; c++) { if (sh[c] === 2) hit++; else if (sh[c] === 1) miss++; }
+    if (miss > 100 - SHIP_CELLS || hit > SHIP_CELLS) return { over: true, winner: 1 - t, reason: '반칙패 — 포격 결과를 거짓으로 알렸어요' };
+  }
   return { over: false };
 }
 
 // ---- 봇 ----
 export function ai(state, level = 2) {
   const rng = makeRng();
-  if (state.phase === 'place') return { place: randomPlacement(rng) };
+  if (state.phase === 'place') return withSalt({ place: randomPlacement(rng) });
+  if (state.phase === 'proof') return proofFor(state);   // 이겼으면 함대를 증명한다
   if (state.pendingShot) return revealFor(state);   // 내 바다가 맞았으면 결과를 공개한다
   const seat = state.turn, opp = 1 - seat;
   const shots = state.shots[seat];

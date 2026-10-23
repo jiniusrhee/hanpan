@@ -128,7 +128,27 @@ export const invariants = {
       if (state.shots[p.by][p.i] !== 0) return '이미 쏜 칸을 다시 쏨';
     }
     if (prev && move && move.fire != null && !state.pendingShot) return '쏘고도 결과 대기 상태가 아님';
-    if (state.phase !== 'play') return null;
+    // 배치 약속: 배치를 마친 좌석은 64자리 해시를 가져야 하고, 내 기기에서는 내 함대·소금값과 맞아야 한다
+    for (const s of [0, 1]) {
+      if (!state.placed[s]) continue;
+      if (!/^[0-9a-f]{64}$/.test(state.commits[s] || '')) return `배치 약속값 이상 (좌석 ${s})`;
+      if (state.ships[s] && state.salts[s] != null && state.phase !== 'done' && mod.fleetCommit(state.salts[s], state.ships[s]) !== state.commits[s]) return `약속값이 내 함대와 안 맞음 (좌석 ${s})`;
+    }
+    if (state.phase === 'proof') {
+      // 증명할 차례는 상대 함대를 다 격침시킨 쪽이어야 한다
+      if (state.sunk[1 - state.turn].length !== mod.SHIPS.length) return '상대 함대가 남았는데 증명 단계';
+      if (state.pendingShot) return '증명 단계인데 결과 대기 중';
+    }
+    if (state.phase === 'done') {
+      if (!state.proof) return '끝났는데 증명 기록이 없음';
+      // 판정 일관성: 같은 증명을 다시 판정하면 같은 결론이어야 한다
+      if (prev && move && move.proof && mod.verifyProof(prev, prev.turn, move.proof).ok !== state.proof.ok) return '증명 판정 불일치';
+      // 정직한 증명(내 기기의 진짜 함대·소금값)은 절대 거절되면 안 된다
+      if (prev && move && move.proof && prev.ships[prev.turn] && JSON.stringify(move.proof) === JSON.stringify({ salt: prev.salts[prev.turn] || '', fleet: prev.ships[prev.turn].map((x) => ({ r: x.r, c: x.c, len: x.len, dir: x.dir })) }) && !state.proof.ok) return `정직한 증명이 거절됨 (${state.proof.why})`;
+    }
+    // 정직한 시뮬레이션에서 '진행 중 반칙패'(빗나감 83칸 초과)는 나올 수 없다
+    if (state.phase === 'play' && mod.status(state).over) return `정직한 진행인데 반칙패: ${mod.status(state).reason}`;
+    if (state.phase === 'place') return null;
     for (const s of [0, 1]) {
       if (!state.ships[s]) continue;   // 온라인에서는 상대 배치를 아예 갖고 있지 않다
       if (!mod.validPlacement(state.ships[s])) return `배치가 규칙 위반 (좌석 ${s})`;

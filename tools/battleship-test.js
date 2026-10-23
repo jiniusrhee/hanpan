@@ -88,6 +88,12 @@ const inspect = (page) => page.evaluate(() => {
     oppHits: st.shots[1 - me].filter((v) => v === 2).length,   // 내가 맞은 수
     sunk: String(st.sunk.map((a) => a.length)),
     over: !!mt.over,
+    commits: st.commits.map((c) => (c ? c.slice(0, 12) : null)).join(','),
+    mySaltKnown: typeof st.salts[me] === 'string',
+    oppSaltKnown: st.salts[1 - me] != null,
+    proof: st.proof ? `${st.proof.seat}:${st.proof.ok}` : null,
+    reason: mt.over ? mt.over.reason : '',
+    revealedDrawn: document.querySelectorAll('.bs-ship.revealed').length,
   };
 });
 
@@ -143,7 +149,7 @@ await B.screenshot({ path: path.join(OUT, '4-B-after.png') });
 ok('포격이 충분히 진행됐다', shots > 20, `${shots}발`);
 ok('명중 기록이 양쪽에서 같다', fa.myHits === fb.oppHits && fa.oppHits === fb.myHits, `A(내가때림 ${fa.myHits}/내가맞음 ${fa.oppHits}) B(${fb.myHits}/${fb.oppHits})`);
 ok('격침 수가 양쪽에서 같다', fa.sunk === fb.sunk, `${fa.sunk} / ${fb.sunk}`);
-ok('격침이 실제로 일어났다', fa.sunk !== '0,0', fa.sunk);
+// (격침은 무작위 포격이라 중간 시점엔 없을 수도 있다 — 판 끝에서 '한쪽 함대가 전멸했다'로 확인한다)
 ok('포격 중에도 상대 함대 위치는 없다', fa.oppShips === 'null' && fb.oppShips === 'null');
 
 ok('중간 점검 시점에 판이 아직 진행 중이다', fa.over === false, `over=${fa.over}`);
@@ -167,6 +173,20 @@ const ea = await inspect(A), eb = await inspect(B);
 ok('판이 끝까지 진행된다', ea.over === true, `over=${ea.over} 격침=${ea.sunk}`);
 ok('끝난 뒤에도 양쪽 격침 수가 같다', ea.sunk === eb.sunk, `${ea.sunk} / ${eb.sunk}`);
 ok('한쪽 함대가 전멸했다', ea.sunk.split(',').some((v) => v === '5'), ea.sunk);
+// 배치 약속·끝난 뒤 증명
+ok('두 기기의 배치 약속값이 같다', ea.commits === eb.commits && !ea.commits.includes('null'), `${ea.commits} / ${eb.commits}`);
+ok('소금값은 자기 것만 안다', ea.mySaltKnown && eb.mySaltKnown && !ea.oppSaltKnown && !eb.oppSaltKnown);
+ok('이긴 쪽 함대 증명이 통과했다', ea.proof && ea.proof.endsWith(':true') && ea.proof === eb.proof, `${ea.proof} / ${eb.proof}`);
+ok('결과가 정상 승리다(반칙 아님)', !/반칙/.test(ea.reason) && ea.reason === eb.reason, `${ea.reason} / ${eb.reason}`);
+{
+  // 진 쪽 기기에는 이긴 쪽 함대가 이제 공개되어 있어야 한다 (남은 함선이 점선으로 그려진다)
+  const winner = +ea.proof.split(':')[0];
+  const loser = winner === ea.mySeat ? eb : ea;
+  const winnerDev = winner === ea.mySeat ? ea : eb;
+  const unsunk = 5 - +winnerDev.sunk.split(',')[winner];
+  ok('진 쪽 기기에 이긴 쪽 함대가 공개됐다', loser.oppShips !== 'null', `oppShips=${String(loser.oppShips).slice(0, 40)}`);
+  ok('진 쪽 화면에 남은 함선이 점선으로 보인다', loser.revealedDrawn === unsunk, `그려진 ${loser.revealedDrawn} / 남은 ${unsunk}`);
+}
 await A.screenshot({ path: path.join(OUT, '6-A-end.png') });
 await B.screenshot({ path: path.join(OUT, '7-B-end.png') });
 

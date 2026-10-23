@@ -12,6 +12,7 @@
     "test:bots": "node test/bots.js --games 10 --out ./bots",
     "test:anim": "node tools/anim-test.js ./anim-shots",
     "test:battleship": "node tools/battleship-test.js ./bs-shots",
+    "test:fair": "node test/battleship-cheat.js",
     "test:online": "node tools/online-test.js ./shots && node tools/online-test2.js ./shots",
     "shots": "node tools/browser-test.js http://localhost:3210/ ./shots",
     "icons": "node tools/make-icons.js"
